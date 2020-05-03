@@ -33,34 +33,36 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 }
 
 static void onMessageCallback(WebsocketsMessage message) {
-	int temp_on=0, temp_off=10000000, tok_id;
-	char *tok=NULL, *s = (char *)message.c_str();
+	int temp_on=0, temp_off=10000000;
+	char *tok = NULL;
 
-	// Serial.print("WS: ");
-	// Serial.println(message.data());
+	char *s = (char *)message.c_str();
+
 	last_ping = millis();
 
 	switch (s[0]) {
-		case 's':   // set pulse t_on, t_off
-			tok_id = 0;
-			while(s) {
+		case 's':   // "s,100,200" set pulse to t_on = 100 us, t_off = 200 us
+			// split string into 3 tokens at ',' and convert to int
+			for(unsigned tok_id=0; tok_id<=2; tok_id++) {
 				tok = strsep(&s, ",");
-				if (tok) {
-					switch (tok_id++) {
-						case 1:
-							temp_on = atoi(tok);
-							break;
-						case 2:
-							temp_off = atoi(tok);
-							break;
-					}
+				if (tok == NULL) {
+					Serial.printf("parse error!\n");
+					return;
+				}
+				if (tok_id == 1) {
+					temp_on = atoi(tok);
+				} else if (tok_id == 2) {
+					temp_off = atoi(tok);
 				}
 			}
 			set_pulse(temp_on, temp_off);
 			break;
 
-		case 'p':  // ping
+		case 'p':  // 'p' command = ping
 			break;
+
+		default:
+			Serial.println(message.data());
 	}
 }
 
@@ -117,7 +119,7 @@ static void handle_http(void)
 		file.close();
 		return;
 	}
-	http_server.send(404, "text/plain", "FileNotFound");
+	http_server.send(404, "text/plain", "File not found!");
 }
 
 void refresh_http(void)
@@ -148,6 +150,5 @@ void init_comms(void)
 	srand(RANDOM_REG32);
 
 	ws_server.listen(8080);
-	Serial.print("Websocket at 8080 online: ");
-	Serial.println(ws_server.available());
+	Serial.printf("Websocket at 8080 online: %d\n", ws_server.available());
 }
