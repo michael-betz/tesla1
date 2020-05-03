@@ -1,9 +1,8 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
-#include <ESP8266mDNS.h>
-#include <FS.h>
 #include <ArduinoWebsockets.h>
+#include <FS.h>
 
 #include "comms.h"
 #include "main.h"
@@ -126,11 +125,11 @@ void refresh_http(void)
 	http_server.handleClient();
 }
 
-
 void init_comms(void)
 {
+	WiFi.hostname(HOST_NAME);
 	WiFi.begin(WIFI_NAME, WIFI_PW);
-	Serial.printf("\nThis is Tesla1, connecting to %s \n", WIFI_NAME);
+	Serial.printf("\nThis is %s, connecting to %s \n", HOST_NAME, WIFI_NAME);
 
 	for (int i=0; i<=500; i++) {
 		if (WiFi.status() == WL_CONNECTED) {
@@ -143,16 +142,12 @@ void init_comms(void)
 	}
 
 	SPIFFS.begin();
-	if (MDNS.begin("tesla1")) {
-		Serial.println("MDNS responder started");
-	}
-	// http_server.on("/", handle_http);
 	http_server.onNotFound(handle_http);
 	http_server.begin();
 
 	srand(RANDOM_REG32);
 
 	ws_server.listen(8080);
-	Serial.print("Websocket online: ");
+	Serial.print("Websocket at 8080 online: ");
 	Serial.println(ws_server.available());
 }
