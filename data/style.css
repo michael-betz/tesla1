@@ -1,0 +1,66 @@
+
+body {
+	background-color: #404040;
+	font-family: sans-serif;
+}
+
+#main {
+	background-color: #d0FFd0;
+	-moz-border-radius: 5px;
+	-webkit-border-radius: 5px;
+	border-radius: 5px;
+	border: 2px solid #000000;
+	width: 90%;
+	margin: 0 auto;
+	padding: 20px
+}
+
+textarea {
+  height: calc(100vh - 175px);
+}
+
+.inline {
+   display:inline-block;
+   margin-right:5px;
+}
+
+#tStat {
+  font: 0.8em 'Andale Mono', Consolas, 'Courier New';
+  line-height: 1.6em;
+}
+
+.slidecontainer {
+    padding: 30px;
+    /*width: 75%;*/
+    /*height: 60px;*/
+}
+
+.slider {
+    -webkit-appearance: none;
+    width: 75%;
+    height: 20px;
+    border-radius: 5px;
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+}
+
+/*.slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}*/
+
+.slider::-moz-range-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #4CAF50;
+    cursor: pointer;
+}

@@ -1,0 +1,99 @@
+<html>
+<meta charset="UTF-8">
+<head><title>Tesla1</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+<div id="main">
+    <h1>🌩️ Tesla1 🌩️</h1>
+    <p>A Tesla coil pulse generator.
+    <b>Status = <span id=connected_status>❌</span></b>
+  </p>
+
+  <div class="slidecontainer">
+    <input type="range" min="100" max="10000" class="slider" id="T_off_slider">
+    <b>T_off = <span id=T_off_status>xxx</span></b>
+  </div>
+
+  <div class="slidecontainer">
+    <input type="range" min="0" max="1000" class="slider" id="T_on_slider">
+    <b>T_on = <span id=T_on_status>xxx</span></b>
+  </div>
+
+</div>
+<script type="text/javascript">
+  var stats = [];
+  var ranges = [];
+
+  function init() {
+    var wsUri = "ws://" + window.location.host + ":8080";
+    // var wsUri = "ws://192.168.42.178:8080";
+    var websocket = new WebSocket(wsUri);
+
+    var MAX_DUTY_PERCENT = 20;
+    var MAX_T_ON = 200000;  // Max on-time [us]
+
+    websocket.onopen = function(evt) {
+      connected_status.innerHTML = "✅";
+      // setInterval(function() {
+      //   websocket.send('p');
+      // }, 250);
+      processValues();
+    };
+
+    websocket.onclose = function(evt) {
+      connected_status.innerHTML = "❌";
+    };
+
+    websocket.onmessage = function(evt) {
+      console.log("dat: " + evt.data);
+    };
+
+    websocket.onerror = function(evt) {
+      connected_status.innerHTML = "🔥 " + evt;
+    };
+
+    function engLabel(val, unit='Hz') {
+      if (val == 0) {
+        ord = 0;
+      } else {
+        ord = Math.floor(Math.log10(Math.abs(val)) / 3);
+      }
+      if (ord < 0) {
+        pre = ['', 'm', 'u', 'n', 'p', 'f'][-ord]
+      } else {
+        pre = ['', 'k', 'M', 'G', 'T'][ord]
+      }
+      val = val / Math.pow(10, ord * 3);
+      return val.toFixed(1) + ' ' + pre + unit;
+    }
+
+    function processValues() {
+        var values = [];
+        ranges.forEach(function (val, index) {
+          tmp = Math.pow(val.value / 10, 2);
+          values.push(tmp);
+          stats[index].innerHTML = engLabel(tmp / 1e6, 's');
+        });
+
+        max_t_on = Math.min(MAX_T_ON, values[1] * MAX_DUTY_PERCENT / 100);
+        values[0] = Math.min(max_t_on, values[0]);
+        ranges[0].max = Math.pow(max_t_on, 1 / 2) * 10
+        websocket.send('s,' + values[0] + ',' + values[1])
+    }
+
+    ["T_on", "T_off"].forEach(function (range_name, index) {
+      stats.push(document.getElementById(range_name + "_status"));
+      r = document.getElementById(range_name + "_slider");
+      ranges.push(r);
+      r.oninput = processValues;
+    });
+
+    ranges[0].value = ranges[0].min;
+    ranges[1].value = ranges[1].max;
+  }
+
+  window.addEventListener("load", init, false);
+
+</script>
+</body></html>
