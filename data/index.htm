@@ -11,12 +11,12 @@
   </p>
 
   <div class="slidecontainer">
-    <input type="range" min="100" max="10000" class="slider" id="T_off_slider">
+    <input type="range" min="2000" max="10000" class="slider" id="T_off_slider">
     <b>T_off = <span id=T_off_status>xxx</span></b>
   </div>
 
   <div class="slidecontainer">
-    <input type="range" min="0" max="1000" class="slider" id="T_on_slider">
+    <input type="range" min="0" max="10000" class="slider" id="T_on_slider">
     <b>T_on = <span id=T_on_status>xxx</span></b>
   </div>
 
@@ -25,9 +25,24 @@
   var stats = [];
   var ranges = [];
 
+  function engLabel(val, unit='Hz') {
+    if (val == 0) {
+      ord = 0;
+    } else {
+      ord = Math.floor(Math.log10(Math.abs(val)) / 3);
+    }
+    if (ord < 0) {
+      pre = ['', 'm', 'u', 'n', 'p', 'f'][-ord];
+    } else {
+      pre = ['', 'k', 'M', 'G', 'T'][ord];
+    }
+    val = val / Math.pow(10, ord * 3);
+    return val.toFixed(1) + ' ' + pre + unit;
+  }
+
   function init() {
-    var wsUri = "ws://" + window.location.host + ":8080";
-    // var wsUri = "ws://192.168.42.178:8080";
+    // var wsUri = "ws://" + window.location.host + ":8080";
+    var wsUri = "ws://192.168.42.178:8080";
     var websocket = new WebSocket(wsUri);
 
     var MAX_DUTY_PERCENT = 20;
@@ -53,33 +68,32 @@
       connected_status.innerHTML = "🔥 " + evt;
     };
 
-    function engLabel(val, unit='Hz') {
-      if (val == 0) {
-        ord = 0;
+
+
+    function sliderToUs(val, inverse=false) {
+      // Make slider output logarithmic over 6 decades
+      // if (val == 0) return 0;
+      var N_DECADES = 6;
+      if (inverse) {
+        return Math.log10(val + 1) * 10000 / N_DECADES;
       } else {
-        ord = Math.floor(Math.log10(Math.abs(val)) / 3);
+        return Math.pow(10, val / 10000 * N_DECADES) - 1;
       }
-      if (ord < 0) {
-        pre = ['', 'm', 'u', 'n', 'p', 'f'][-ord]
-      } else {
-        pre = ['', 'k', 'M', 'G', 'T'][ord]
-      }
-      val = val / Math.pow(10, ord * 3);
-      return val.toFixed(1) + ' ' + pre + unit;
     }
 
     function processValues() {
         var values = [];
         ranges.forEach(function (val, index) {
-          tmp = Math.pow(val.value / 10, 2);
+          tmp = Math.floor(sliderToUs(val.value));
           values.push(tmp);
           stats[index].innerHTML = engLabel(tmp / 1e6, 's');
         });
 
-        max_t_on = Math.min(MAX_T_ON, values[1] * MAX_DUTY_PERCENT / 100);
+        max_t_on = Math.floor(Math.min(MAX_T_ON, values[1] * MAX_DUTY_PERCENT / 100));
         values[0] = Math.min(max_t_on, values[0]);
-        ranges[0].max = Math.pow(max_t_on, 1 / 2) * 10
-        websocket.send('s,' + values[0] + ',' + values[1])
+        ranges[0].max = sliderToUs(max_t_on, true);
+        console.log(values);
+        websocket.send('s,' + values[0] + ',' + values[1]);
     }
 
     ["T_on", "T_off"].forEach(function (range_name, index) {
