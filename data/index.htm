@@ -4,23 +4,25 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-<div id="main">
+<div style="text-align: center;">
     <h1>🌩️ Tesla1 🌩️</h1>
-    <p>A Tesla coil pulse generator.
-    <b>Status = <span id=connected_status>❌</span></b>
-  </p>
-
-  <div class="slidecontainer">
-    <input type="range" min="2000" max="10000" class="slider" id="T_off_slider">
-    <b>T_off = <span id=T_off_status>xxx</span></b>
-  </div>
-
-  <div class="slidecontainer">
-    <input type="range" min="0" max="10000" class="slider" id="T_on_slider">
-    <b>T_on = <span id=T_on_status>xxx</span></b>
-  </div>
-
+    <i>A Tesla coil pulse generator.</i>
+    <b>WS: <span id=connected_status>❌</span></b>
 </div>
+
+  <div class="slidecontainer">
+    <b>ON</b>
+    <input type="range" min="2000" max="10000" class="slider" id="T_off_slider">
+    <div class=sliderNumber id=T_off_status>xxx</div>
+  </div>
+
+  <div class="slidecontainer">
+    <b>OFF</b>
+    <input type="range" min="0" max="10000" class="slider" id="T_on_slider">
+    <span class=sliderNumber id=T_on_status>xxx</span>
+  </div>
+
+
 <script type="text/javascript">
   var stats = [];
   var ranges = [];
@@ -67,8 +69,6 @@
     websocket.onerror = function(evt) {
       connected_status.innerHTML = "🔥 " + evt;
     };
-
-
 
     function sliderToUs(val, inverse=false) {
       // Make slider output logarithmic over 6 decades
