@@ -71,7 +71,14 @@ void refresh_ws(unsigned cycle) {
 		ws_client = ws_server.accept();
 		ws_client.onMessage(onMessageCallback);
 		ws_client.onEvent(onEventCallback);
-		ws_client.send("This is Tesla1 ws_server!");
+		// Send hello message and transmit max. duty / on time to JS
+		String s;
+		s += "{\"hello\": \"This is Tesla1 ws_server!\", \"MAX_DUTY_PERCENT\": ";
+		s += MAX_DUTY_PERCENT;
+		s += ", \"MAX_T_ON\": ";
+		s += MAX_T_ON;
+		s += "}";
+		ws_client.send(s);
 		last_ping = millis();
 	}
 	if (ws_client.available()) {

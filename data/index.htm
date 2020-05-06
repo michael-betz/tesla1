@@ -47,8 +47,9 @@
     // var wsUri = "ws://192.168.42.178:8080";
     var websocket = new WebSocket(wsUri);
 
-    var MAX_DUTY_PERCENT = 20;
-    var MAX_T_ON = 200000;  // Max on-time [us]
+    // These are set on connection
+    var MAX_DUTY_PERCENT = 0;  // Max duty cycle [%]]
+    var MAX_T_ON = 0;  // Max on-time [us]
 
     websocket.onopen = function(evt) {
       connected_status.innerHTML = "✅";
@@ -60,14 +61,22 @@
 
     websocket.onclose = function(evt) {
       connected_status.innerHTML = "❌";
+      rangeReset();
     };
 
     websocket.onmessage = function(evt) {
       console.log("dat: " + evt.data);
+      if (evt.data.startsWith('{"hello": ')) {
+        temp = JSON.parse(evt.data);
+        MAX_DUTY_PERCENT = temp['MAX_DUTY_PERCENT'];
+        MAX_T_ON = temp['MAX_T_ON'];
+        rangeReset(false);
+      }
     };
 
     websocket.onerror = function(evt) {
       connected_status.innerHTML = "🔥 " + evt;
+      rangeReset();
     };
 
     function sliderToUs(val, inverse=false) {
@@ -103,8 +112,13 @@
       r.oninput = processValues;
     });
 
-    ranges[0].value = ranges[0].min;
-    ranges[1].value = ranges[1].max;
+    function rangeReset(disable=true) {
+      ranges[0].value = ranges[0].min;
+      ranges[1].value = ranges[1].max;
+      ranges.forEach(function (val, index) {val.disabled = disable;});
+    };
+
+    rangeReset();
   }
 
   window.addEventListener("load", init, false);
