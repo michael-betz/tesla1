@@ -7,7 +7,7 @@ Uses the I2S peripheral to achieve precise timing. Smallest pulse-width is 1 us.
 
 ![UI](pics/ui.png)
 
-Has a minimal but very responsive user interface based on web-sockets. The sliders cover 6 octaves on a logarithnmic scale. There's a configurable maximum on-time and duty cycle, which is always observed. 
+Has a minimal but very responsive user interface based on web-sockets. The sliders cover 6 decades on a logarithnmic scale. There's a configurable maximum on-time and duty cycle, which is always observed. 
 
 Putting an ESP on the control board might be an alternative to these hopelessly overpriced fiber-optic transceivers.
 You'll get fully isolated control through WIFI.
