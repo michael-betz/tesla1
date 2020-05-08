@@ -1,9 +1,9 @@
 # Tesla 1
-A simple pulse generator using a ESP8266 8-pin module. Designed to work as an interrupter for my Tesla coil...
+A simple pulse generator using nothing more than a ESP8266 8-pin module (ESP-02). Designed to work as an interrupter for my Tesla coil...
 
 ![scope shot](pics/scope.png)
 
-Uses the I2S peripheral to achieve precise timing. Smallest pulse-width is 1 us.
+Uses the I2S peripheral to achieve precise timing. Smallest pulse-width is 1 us. Smaller pulse-widths are possible by increasing the I2S clock rate.
 
 ![UI](pics/ui.png)
 
