@@ -4,12 +4,17 @@
 #include "main.h"
 
 void setup() {
-	digitalWrite(PIN_FIRE, 0);
 	pinMode(PIN_FIRE, OUTPUT);
+	digitalWrite(PIN_FIRE, 0);
 
 	Serial.begin(115200);
 
+	pinMode(PIN_FIRE, OUTPUT);
+	digitalWrite(PIN_FIRE, 0);
+
 	init_comms();
+
+	refresh_pulser();
 	init_pulser();
 }
 
