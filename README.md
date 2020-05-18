@@ -14,9 +14,22 @@ You'll get fully isolated control through WIFI.
 
 Will the ESP and its WIFI connection be stable in the tremendous :zap: EMI :zap: of a tesla coil? We'll find out ...
 
+__... update__: yes, it is stable :ok_hand:. 
+
+I've had it successfully operating in a grounded metal box, directly connected to the [UD2.7 board](http://www.loneoceans.com/labs/ud27/), the box sitting right below the secondary.
+
+Shielding the electronics from the electric field is absolutely mandatory. A grounded cookie box works wonders keeping the electric field out while WIFI still leaks in surprisingly well, which is what we need here :thumbsup:.
+
 # Building
 Needs platform.io installed. Set your WIFI credentials and other parameters in `platform.ini`.
 
 ```code
     pio run -t uploadfs -t upload -t monitor
 ```
+
+# Caveats
+  * will output a ~100 ms ON pulse after a reset. So power up this circuit first, then turn up the power on the variac. The turn-on transient is worse when running in `ACTIVE_LOW` mode.
+
+# TODO
+  * Change definition of duty cycle to t_on / (t_on + t_off) to allow CW mode
+  * Add 50 Hz zero crossing synchronization

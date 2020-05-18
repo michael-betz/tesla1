@@ -8,9 +8,9 @@ static unsigned t_off = 1000000;  // 1 s
 
 void refresh_pulser(void)
 {
-	static bool pulse_state=false;
-	static unsigned bit_counter=0;
-	static unsigned sample=0;
+	static bool pulse_state = false;
+	static unsigned bit_counter = 0;
+	static unsigned sample = IS_ACTIVE_LOW ? 0xFFFFFFFF : 0;
 
 	// try to output the previously missed sample again
 	if (i2s_write_sample_nb(sample) == false) return;
@@ -18,10 +18,13 @@ void refresh_pulser(void)
 	// Generate N new samples to fill up the DMA buffer
 	while (1) {
 		if (t_on == 0) {
-			sample = 0;
+			// Always OFF
+			sample = IS_ACTIVE_LOW ? 0xFFFFFFFF : 0;
 		} else if (t_off == 0) {
-			sample = 0xFFFFFFFF;
+			// Always ON
+			sample = IS_ACTIVE_LOW ? 0 : 0xFFFFFFFF;
 		} else {
+			// Toggle
 			for (unsigned i=0; i<=31; i++) {
 				if (bit_counter <= 0) {
 					bit_counter = pulse_state ? t_off : t_on;
