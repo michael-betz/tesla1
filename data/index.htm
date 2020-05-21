@@ -12,18 +12,61 @@
 
   <div class="slidecontainer">
     <b>OFF</b>
-    <input type="range" min="2000" max="10000" class="slider" id="T_off_slider">
-    <div class=sliderNumber id=T_off_status>xxx</div>
+    <input type="range" min="1000" max="10000" class="slider" id="OFF_slider">
+    <div class=sliderNumber id=OFF_status>xxx</div>
   </div>
 
   <div class="slidecontainer">
     <b>ON</b>
-    <input type="range" min="0" max="10000" class="slider" id="T_on_slider">
-    <span class=sliderNumber id=T_on_status>xxx</span>
+    <input type="range" min="0" max="10000" class="slider" id="ON_slider">
+    <span class=sliderNumber id=ON_status>xxx</span>
   </div>
 
+  <div class="slidecontainer">
+    <b>FREQ</b>
+    <input type="range" min="1000" max="10000" class="slider" id="FREQ_slider">
+    <span class=sliderNumber id=FREQ_status>xxx</span>
+  </div>
+
+  <div class="slidecontainer">
+    <b>DUTY</b>
+    <input type="range" min="0" max="10000" class="slider" id="DUTY_slider">
+    <span class=sliderNumber id=DUTY_status>xxx</span>
+  </div>
+
+<div class="slidecontainer">
+    <b>PHASE</b>
+    <input type="range" min="0" max="10000" class="slider" id="PHASE_slider">
+    <span class=sliderNumber id=PHASE_status>xxx</span>
+  </div>
 
 <script type="text/javascript">
+  // var wsUri = "ws://" + window.location.host + ":8080";
+  var wsUri = "ws://192.168.42.179:8080";
+  var websocket = new WebSocket(wsUri);
+
+  // These are set on connection
+  var MAX_DUTY_PERCENT = 0;  // Max duty cycle [%]
+  var MAX_T_ON = 0;  // Max on-time [us]
+  var BITS_PER_SEC = 1000000; // I2S sampling rate
+
+  var sliders = {};
+  ["ON", "OFF", "FREQ", "DUTY", "PHASE"].forEach(function (v, i) {
+    sliders[v] = [
+      document.getElementById(v + "_slider"),  // slider object
+      document.getElementById(v + "_status"),  // label object
+      0                                        // value with units (like [s])
+    ]
+  });
+
+  ["ON", "OFF"].forEach(function (k) {
+    sliders[k][0].oninput = processT;
+  });
+
+  ["FREQ", "DUTY"].forEach(function (k) {
+    sliders[k][0].oninput = processF;
+  });
+
   var stats = [];
   var ranges = [];
 
@@ -42,21 +85,77 @@
     return val.toFixed(1) + ' ' + pre + unit;
   }
 
+  function sliderToS(val, inverse=false) {
+    // Make slider output logarithmic over N decades, [s] scaling
+    var N_DECADES = 4;
+    var min_val = Math.pow(10, -N_DECADES)
+    if (inverse) {
+      return (Math.log10(val + min_val) / N_DECADES + 1) * 10000;
+    } else {
+      return Math.pow(10, (val / 10000 - 1) * N_DECADES) - min_val;
+    }
+  }
+
+  function processT() {
+      // deal with the ON / OFF sliders
+      ["ON", "OFF"].forEach(function (k) {
+        v = sliders[k];
+        v[2] = sliderToS(v[0].value);
+        v[1].innerHTML = engLabel(v[2], 's');
+      });
+
+      // calc. max. t_on and set slider limit
+      m_duty = MAX_DUTY_PERCENT / 100;
+      max_t_on = 0;
+      if (m_duty > 0)
+        max_t_on = m_duty * sliders["OFF"][2] / (1 - m_duty);
+      max_t_on = Math.min(MAX_T_ON / 1e6, max_t_on);
+      sliders["ON"][0].max = sliderToS(max_t_on, true);
+
+      // t_on
+      sliders["ON"][2] = Math.min(max_t_on, sliders["ON"][2]);
+
+      // calculate duty / ftw values and send them out
+      T = sliders["ON"][2] + sliders["OFF"][2]
+      duty = sliders["ON"][2] / T;
+      duty = Math.floor(duty * 0xFFFFFFFF);
+      ftw = Math.floor(0x100000000 / BITS_PER_SEC / T);
+      websocket.send('s,' + ftw + ',' + duty);
+      // console.log(ftw.toString(16), duty.toString(16), duty / ftw);
+  }
+
+  function processF() {
+      sf = sliders["FREQ"]
+      sd = sliders["DUTY"]
+
+      sf[2] = 1 / sliderToS(sf[0].value);
+      sf[1].innerHTML = engLabel(sf[2], 'Hz');
+
+      sd[2] = sd[0].value / 10000;
+      sd[1].innerHTML = (sd[2] * 100).toFixed(1) + ' %';
+
+      ftw = Math.floor(0x100000000 * sf[2] / BITS_PER_SEC);
+      duty = Math.floor(sd[2] * 0xFFFFFFFF);
+      websocket.send('s,' + ftw + ',' + duty);
+  }
+
+  function rangeReset(disable=true) {
+      for (const [k, v] of Object.entries(sliders)) {
+        v[0].disabled = disable;
+        if (k == "OFF")
+          v[0].value = v[0].max;
+        else
+          v[0].value = v[0].min;
+      }
+  };
+
   function init() {
-    var wsUri = "ws://" + window.location.host + ":8080";
-    // var wsUri = "ws://192.168.42.178:8080";
-    var websocket = new WebSocket(wsUri);
-
-    // These are set on connection
-    var MAX_DUTY_PERCENT = 0;  // Max duty cycle [%]]
-    var MAX_T_ON = 0;  // Max on-time [us]
-
     websocket.onopen = function(evt) {
       connected_status.innerHTML = "✅";
       // setInterval(function() {
       //   websocket.send('p');
       // }, 250);
-      processValues();
+      processT();
     };
 
     websocket.onclose = function(evt) {
@@ -69,9 +168,10 @@
       if (evt.data.startsWith('{"hello": ')) {
         temp = JSON.parse(evt.data);
         MAX_DUTY_PERCENT = temp['MAX_DUTY_PERCENT'];
+        sliders["DUTY"][0].max = MAX_DUTY_PERCENT / 100 * 10000;
         MAX_T_ON = temp['MAX_T_ON'];
         rangeReset(false);
-        processValues();
+        processT();
       }
     };
 
@@ -79,48 +179,6 @@
       connected_status.innerHTML = "🔥 " + evt;
       rangeReset();
     };
-
-    function sliderToUs(val, inverse=false) {
-      // Make slider output logarithmic over 6 decades
-      // if (val == 0) return 0;
-      var N_DECADES = 6;
-      if (inverse) {
-        return Math.log10(val + 1) * 10000 / N_DECADES;
-      } else {
-        return Math.pow(10, val / 10000 * N_DECADES) - 1;
-      }
-    }
-
-    function processValues() {
-        var values = [];
-        ranges.forEach(function (val, index) {
-          tmp = Math.floor(sliderToUs(val.value));
-          values.push(tmp);
-          stats[index].innerHTML = engLabel(tmp / 1e6, 's');
-        });
-
-        max_t_on = Math.floor(Math.min(MAX_T_ON, values[1] * MAX_DUTY_PERCENT / 100));
-        values[0] = Math.min(max_t_on, values[0]);
-        ranges[0].max = sliderToUs(max_t_on, true);
-        console.log(values);
-        ftw =
-        websocket.send('s,' + values[0] + ',' + values[1]);
-    }
-
-    ["T_on", "T_off"].forEach(function (range_name, index) {
-      stats.push(document.getElementById(range_name + "_status"));
-      r = document.getElementById(range_name + "_slider");
-      ranges.push(r);
-      r.oninput = processValues;
-    });
-
-    function rangeReset(disable=true) {
-      ranges[0].value = ranges[0].min;
-      ranges[1].value = ranges[1].max;
-      ranges.forEach(function (val, index) {val.disabled = disable;});
-    };
-
-    rangeReset();
   }
 
   window.addEventListener("load", init, false);

@@ -14,7 +14,7 @@ static unsigned g_phase; // 32 bit DDS phase
 // and fractional frequencies (on average).
 // The idea is that this output frequency is stable and controllable enough
 // to reasonably match the phase of 60 Hz mains over minutes.
-void refresh_pulser_dds(void)
+void refresh_pulser(void)
 {
 	static unsigned acc = 0;  // 32 bit phase accumulator
 	static unsigned sample = IS_ACTIVE_LOW ? 0xFFFFFFFF : 0;
@@ -40,12 +40,12 @@ void refresh_pulser_dds(void)
 		// Stop generating new samples on buffer overflow
 		// the current sample will be output on beginning of next call
 		if (i2s_write_sample_nb(sample) == false) return;
-
+	}
 }
 
 void stop_pulse(void)
 {
-	duty_ = 0;
+	g_duty = 0;
 }
 
 
@@ -74,7 +74,7 @@ void set_pulse(unsigned ftw, unsigned duty)
 
 	g_ftw = ftw;
 	g_duty = duty;
-	Serial.print(" done\n");
+	Serial.printf("ftw: %08x  duty: %08x\n", g_ftw, g_duty);
 }
 
 void init_pulser(void)

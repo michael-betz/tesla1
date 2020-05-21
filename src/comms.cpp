@@ -5,6 +5,7 @@
 #include <FS.h>
 
 #include "comms.h"
+#include "pulser.h"
 #include "main.h"
 
 // websocket server
