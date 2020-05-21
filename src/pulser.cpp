@@ -12,8 +12,6 @@ static unsigned g_phase; // 32 bit DDS phase
 // (relative to an arbitrary starting point).
 // This also dithers the output nicely to achieve precise duty cycles
 // and fractional frequencies (on average).
-// The idea is that this output frequency is stable and controllable enough
-// to reasonably match the phase of 60 Hz mains over minutes.
 void refresh_pulser(void)
 {
 	static unsigned acc = 0;  // 32 bit phase accumulator
@@ -43,32 +41,22 @@ void refresh_pulser(void)
 	}
 }
 
-void stop_pulse(void)
-{
-	g_duty = 0;
-}
+void stop_pulse(void) {	g_duty = 0; }
 
-
-void set_phase(unsigned p)
-{
-	g_phase = p;
-}
+void set_phase(unsigned p) { g_phase = p; }
 
 void set_pulse(unsigned ftw, unsigned duty)
 {
 	// Max. ON time limit
 	unsigned t_on = duty / ftw;  				// [cycles]
-	t_on = t_on * (1000000 / BITS_PER_SEC);  	// [us]
-	if (t_on > MAX_T_ON) {
+	if (t_on > (1ULL * MAX_T_ON * BITS_PER_SEC / 1000000)) {
 		Serial.printf("exceeds MAX_T_ON = %d us\n", MAX_T_ON);
 		return;
 	}
 
 	// Max. duty cycle limit
-	if (duty / (0xFFFFFFFF / 100) > MAX_DUTY_PERCENT) {
-		Serial.printf(
-			"exceeds MAX_DUTY_PERCENT = %d %%\n", MAX_DUTY_PERCENT
-		);
+	if (duty > (0xFFFFFFFFULL * MAX_DUTY_PERCENT / 100)) {
+		Serial.printf("exceeds MAX_DUTY_PERCENT = %d %%\n", MAX_DUTY_PERCENT);
 		return;
 	}
 
