@@ -8,6 +8,7 @@
 void init_pulser(void);
 void refresh_pulser(void);
 void stop_pulse(void);
-void set_pulse(int temp_on, int temp_off);
+void set_pulse(unsigned ftw, unsigned duty);
+void set_phase(unsigned p);
 
 #endif

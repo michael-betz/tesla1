@@ -33,7 +33,7 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 }
 
 static void onMessageCallback(WebsocketsMessage message) {
-	int temp_on=0, temp_off=10000000;
+	unsigned temp_ftw=0, temp_duty=0;
 	char *tok = NULL;
 
 	char *s = (char *)message.c_str();
@@ -41,7 +41,7 @@ static void onMessageCallback(WebsocketsMessage message) {
 	last_ping = millis();
 
 	switch (s[0]) {
-		case 's':   // "s,100,200" set pulse to t_on = 100 us, t_off = 200 us
+		case 's':   // "s,100,200" set ftw to 100 and duty to 200 (int32 scale)
 			// split string into 3 tokens at ',' and convert to int
 			for(unsigned tok_id=0; tok_id<=2; tok_id++) {
 				tok = strsep(&s, ",");
@@ -49,14 +49,14 @@ static void onMessageCallback(WebsocketsMessage message) {
 					Serial.printf("parse error!\n");
 					return;
 				}
-				if (tok_id == 1) {
-					temp_on = atoi(tok);
-				} else if (tok_id == 2) {
-					temp_off = atoi(tok);
-				}
+				if (tok_id == 1) 		temp_ftw = atol(tok);
+				else if (tok_id == 2)	temp_duty = atol(tok);
 			}
-			set_pulse(temp_on, temp_off);
+			set_pulse(temp_ftw, temp_duty);
 			break;
+
+		case 't':   // "t,100" set phase to 100
+			set_phase(atol(&s[2]));
 
 		case 'p':  // 'p' command = ping
 			break;

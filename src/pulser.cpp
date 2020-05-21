@@ -3,13 +3,20 @@
 #include <i2s_reg.h>
 #include "pulser.h"
 
-static unsigned t_on = 0;  // [us]
-static unsigned t_off = 1000000;  // 1 s
+static unsigned g_ftw;   // 32 bit DDS frequency tuning word
+static unsigned g_duty;  // 32 bit DDS duty cycle (0 = OFF, 0xFFFFFFFF = CW)
+static unsigned g_phase; // 32 bit DDS phase
 
-void refresh_pulser(void)
+// Use Direct Digital Synthesis to get a pulse waveform with precisely
+// adjustable (32 bit resolution) frequency, duty cycle and phase
+// (relative to an arbitrary starting point).
+// This also dithers the output nicely to achieve precise duty cycles
+// and fractional frequencies (on average).
+// The idea is that this output frequency is stable and controllable enough
+// to reasonably match the phase of 60 Hz mains over minutes.
+void refresh_pulser_dds(void)
 {
-	static bool pulse_state = false;
-	static unsigned bit_counter = 0;
+	static unsigned acc = 0;  // 32 bit phase accumulator
 	static unsigned sample = IS_ACTIVE_LOW ? 0xFFFFFFFF : 0;
 
 	// try to output the previously missed sample again
@@ -17,60 +24,65 @@ void refresh_pulser(void)
 
 	// Generate N new samples to fill up the DMA buffer
 	while (1) {
-		if (t_on == 0) {
-			// Always OFF
-			sample = IS_ACTIVE_LOW ? 0xFFFFFFFF : 0;
-		} else if (t_off == 0) {
-			// Always ON
-			sample = IS_ACTIVE_LOW ? 0 : 0xFFFFFFFF;
-		} else {
-			// Toggle
-			for (unsigned i=0; i<=31; i++) {
-				if (bit_counter <= 0) {
-					bit_counter = pulse_state ? t_off : t_on;
-					pulse_state = !pulse_state;
-				}
-				sample <<= 1;
-				sample |= IS_ACTIVE_LOW ? !pulse_state : pulse_state;
-				bit_counter--;
+		for (unsigned i=0; i<=31; i++) {
+			sample <<= 1;
+			acc += g_ftw;
+			unsigned tmp = acc + g_phase;
+			if (IS_ACTIVE_LOW) {
+				if (tmp >= g_duty)
+					sample |= 1;
+			} else {
+				if (tmp < g_duty)
+					sample |= 1;
 			}
 		}
 
 		// Stop generating new samples on buffer overflow
 		// the current sample will be output on beginning of next call
 		if (i2s_write_sample_nb(sample) == false) return;
-	}
+
 }
 
 void stop_pulse(void)
 {
-	t_on = 0;
-	t_off = 1000000;
+	duty_ = 0;
 }
 
-void set_pulse(int temp_on, int temp_off)
-{
-	Serial.printf("t_on = %d, t_off = %d ", temp_on, temp_off);
 
-	if (temp_on > MAX_T_ON) {
+void set_phase(unsigned p)
+{
+	g_phase = p;
+}
+
+void set_pulse(unsigned ftw, unsigned duty)
+{
+	// Max. ON time limit
+	unsigned t_on = duty / ftw;  				// [cycles]
+	t_on = t_on * (1000000 / BITS_PER_SEC);  	// [us]
+	if (t_on > MAX_T_ON) {
 		Serial.printf("exceeds MAX_T_ON = %d us\n", MAX_T_ON);
 		return;
 	}
 
-	// duty cycle limit
-	if (100 * temp_on / MAX_DUTY_PERCENT > temp_off) {
+	// Max. duty cycle limit
+	if (duty / (0xFFFFFFFF / 100) > MAX_DUTY_PERCENT) {
 		Serial.printf(
 			"exceeds MAX_DUTY_PERCENT = %d %%\n", MAX_DUTY_PERCENT
 		);
 		return;
 	}
-	t_on = temp_on;
-	t_off = temp_off;
+
+	g_ftw = ftw;
+	g_duty = duty;
 	Serial.print(" done\n");
 }
 
 void init_pulser(void)
 {
+	g_ftw = 0;
+	g_duty = 0;
+	g_phase = 0;
+
 	i2s_begin();
 	i2s_set_rate(WORDS_PER_SEC);
 }

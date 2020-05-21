@@ -103,6 +103,7 @@
         values[0] = Math.min(max_t_on, values[0]);
         ranges[0].max = sliderToUs(max_t_on, true);
         console.log(values);
+        ftw =
         websocket.send('s,' + values[0] + ',' + values[1]);
     }
 
