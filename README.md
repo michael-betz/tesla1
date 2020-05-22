@@ -20,6 +20,11 @@ I've had it successfully operating in a grounded metal box, directly connected t
 
 Shielding the electronics from the electric field is absolutely mandatory. A grounded cookie box works wonders keeping the electric field out while WIFI still leaks in surprisingly well, which is what we need here :thumbsup:.
 
+# Demo
+https://youtu.be/7h7VzaL8ETk
+
+https://youtu.be/TvuAkynQ4Mo
+
 # Building
 Needs platform.io installed. Set your WIFI credentials and other parameters in `platform.ini`.
 
@@ -31,5 +36,4 @@ Needs platform.io installed. Set your WIFI credentials and other parameters in `
   * will output a ~100 ms ON pulse after a reset. So power up this circuit first, then turn up the power on the variac. The turn-on transient is worse when running in `ACTIVE_LOW` mode.
 
 # TODO
-  * Change definition of duty cycle to t_on / (t_on + t_off) to allow CW mode
-  * Add 50 Hz zero crossing synchronization
+    * Add 50 Hz zero crossing synchronization

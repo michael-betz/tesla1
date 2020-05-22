@@ -50,14 +50,15 @@ static void onMessageCallback(WebsocketsMessage message) {
 					Serial.printf("parse error!\n");
 					return;
 				}
-				if (tok_id == 1) 		temp_ftw = atol(tok);
-				else if (tok_id == 2)	temp_duty = atol(tok);
+				if (tok_id == 1) 		temp_ftw = strtoul(tok, NULL, 0);
+				else if (tok_id == 2)	temp_duty = strtoul(tok, NULL, 0);
 			}
 			set_pulse(temp_ftw, temp_duty);
 			break;
 
 		case 't':   // "t,100" set phase to 100
-			set_phase(atol(&s[2]));
+			set_phase(strtoul(&s[2], NULL, 0));
+			break;
 
 		case 'p':  // 'p' command = ping
 			break;

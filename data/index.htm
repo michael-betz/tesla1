@@ -45,7 +45,7 @@
   var wsUri = "ws://192.168.42.179:8080";
   var websocket = new WebSocket(wsUri);
 
-  // These are set on connection
+  // These are set to the C #define values on connection to the ESP8266
   var MAX_DUTY_PERCENT = 0;  // Max duty cycle [%]
   var MAX_T_ON = 0;  // Max on-time [us]
   var BITS_PER_SEC = 1000000; // I2S sampling rate
@@ -67,8 +67,7 @@
     sliders[k][0].oninput = processF;
   });
 
-  var stats = [];
-  var ranges = [];
+  sliders['PHASE'][0].oninput = processP;
 
   function engLabel(val, unit='Hz') {
     if (val == 0) {
@@ -128,7 +127,10 @@
       sf = sliders["FREQ"]
       sd = sliders["DUTY"]
 
-      sf[2] = 1 / sliderToS(sf[0].value);
+      if (false)
+        sf[2] = 119 + sf[0].value / 5000;
+      else
+        sf[2] = 1 / sliderToS(sf[0].value);
       sf[1].innerHTML = engLabel(sf[2], 'Hz');
 
       sd[2] = sd[0].value / 10000;
@@ -139,6 +141,15 @@
       websocket.send('s,' + ftw + ',' + duty);
   }
 
+  function processP() {
+    sp = sliders["PHASE"];
+    sp[2] = sp[0].value / 10000;
+    sp[1].innerHTML = (sp[2] * 360).toFixed(1) + '°';
+    phase = Math.floor(sp[2] * 0xFFFFFFFF);
+    websocket.send('t,' + phase);
+    console.log(phase.toString(16));
+  }
+
   function rangeReset(disable=true) {
       for (const [k, v] of Object.entries(sliders)) {
         v[0].disabled = disable;
@@ -147,6 +158,7 @@
         else
           v[0].value = v[0].min;
       }
+      sliders["FREQ"][0].value = 5000;
   };
 
   function init() {

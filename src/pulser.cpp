@@ -41,9 +41,12 @@ void refresh_pulser(void)
 	}
 }
 
-void stop_pulse(void) {	g_duty = 0; }
+void stop_pulse(void) { g_duty = 0; }
 
-void set_phase(unsigned p) { g_phase = p; }
+void set_phase(unsigned p) {
+	Serial.printf("phase: %08x\n", p);
+	g_phase = p;
+}
 
 void set_pulse(unsigned ftw, unsigned duty)
 {
