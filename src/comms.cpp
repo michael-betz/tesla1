@@ -42,6 +42,13 @@ static void onMessageCallback(WebsocketsMessage message) {
 	last_ping = millis();
 
 	switch (s[0]) {
+		case 'r':  // "r,0": set operating mode to DDS / lock mode
+			if (s[2] == '0')
+				dds_mode();
+			if (s[2] == '1')
+				lock_mode();
+			break;
+
 		case 's':   // "s,100,200" set ftw to 100 and duty to 200 (int32 scale)
 			// split string into 3 tokens at ',' and convert to int
 			for(unsigned tok_id=0; tok_id<=2; tok_id++) {
@@ -53,11 +60,24 @@ static void onMessageCallback(WebsocketsMessage message) {
 				if (tok_id == 1) 		temp_ftw = strtoul(tok, NULL, 0);
 				else if (tok_id == 2)	temp_duty = strtoul(tok, NULL, 0);
 			}
-			set_pulse(temp_ftw, temp_duty);
+			set_pulse(0, temp_ftw, temp_duty);
 			break;
 
 		case 't':   // "t,100" set phase to 100
-			set_phase(strtoul(&s[2], NULL, 0));
+			set_phase(0, strtoul(&s[2], NULL, 0));
+			break;
+
+		// for 60 Hz locking mode
+		case 'u':	//set t_pre (delay after opto rising edge) [us]
+			g_t_pre = strtoul(&s[2], NULL, 0);
+			break;
+
+		case 'v':	//set t_on [us]
+			g_t_on = strtoul(&s[2], NULL, 0);
+			break;
+
+		case 'w':	//set t_off [us]
+			g_t_off = strtoul(&s[2], NULL, 0);
 			break;
 
 		case 'p':  // 'p' command = ping
@@ -139,8 +159,8 @@ void refresh_http(void)
 void init_comms(void)
 {
 	WiFi.hostname(HOST_NAME);
-	WiFi.begin(WIFI_NAME, WIFI_PW);
-	Serial.printf("\nThis is %s, connecting to %s \n", HOST_NAME, WIFI_NAME);
+	WiFi.begin(WIFI_SSID, WIFI_PW);
+	Serial.printf("\nThis is %s, connecting to %s \n", HOST_NAME, WIFI_SSID);
 
 	for (int i=0; i<=500; i++) {
 		if (WiFi.status() == WL_CONNECTED) {

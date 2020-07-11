@@ -9,8 +9,9 @@
   <i>A Tesla coil pulse generator.</i>
   <b>WS: <span id=connected_status>❌</span></b>
   <div>
-    <button onclick="tab('t_tab')">T_ON / T_OFF</button>
-    <button onclick="tab('f_tab')">FREQ / DUTY</button>
+    <button onclick="tab('t_tab'); websocket.send('r,0');">T_ON / T_OFF</button>
+    <button onclick="tab('f_tab'); websocket.send('r,0');">FREQ / DUTY</button>
+    <button onclick="tab('l_tab'); websocket.send('r,1');">MAINS LOCK</button>
   </div>
 </div>
 
@@ -49,9 +50,29 @@
   </div>
 </div>
 
+<div class="tab" id="l_tab" style="display:none">
+  <div class="slidecontainer">
+    <b>PRE</b>
+    <input type="range" min="1" max="17000" class="slider" id="LPRE_slider">
+    <span class=sliderNumber id=LPRE_status>xxx</span>
+  </div>
+
+  <div class="slidecontainer">
+    <b>ON</b>
+    <input type="range" min="0" max="8000" class="slider" id="LON_slider">
+    <span class=sliderNumber id=LON_status>xxx</span>
+  </div>
+
+  <div class="slidecontainer">
+      <b>OFF</b>
+      <input type="range" min="1" max="1000000" class="slider" id="LOFF_slider">
+      <span class=sliderNumber id=LOFF_status>xxx</span>
+  </div>
+</div>
+
 <script type="text/javascript">
-  // var wsUri = "ws://" + window.location.host + ":8080";
-  var wsUri = "ws://192.168.42.179:8080";
+  var wsUri = "ws://" + window.location.host + ":8080";
+  // var wsUri = "ws://192.168.42.217:8080";
   var websocket = new WebSocket(wsUri);
 
   // These are set to the C #define values on connection to the ESP8266
@@ -60,7 +81,7 @@
   var BITS_PER_SEC = 1000000; // I2S sampling rate
 
   var sliders = {};
-  ["ON", "OFF", "FREQ", "DUTY", "PHASE"].forEach(function (v, i) {
+  ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF"].forEach(function (v, i) {
     sliders[v] = [
       document.getElementById(v + "_slider"),  // slider object
       document.getElementById(v + "_status"),  // label object
@@ -77,6 +98,17 @@
   });
 
   sliders['PHASE'][0].oninput = processP;
+
+
+  ["LPRE", "LON", "LOFF"].forEach(function (k) {
+    sliders[k][0].oninput = function() {
+      v = sliders[k];
+      v[2] = v[0].value / 1e6;
+      v[1].innerHTML = engLabel(v[2], 's');
+      cmd = {"LPRE": "u", "LON": "v", "LOFF": "w"}[k]
+      websocket.send(cmd + ',' + v[0].value);
+    };
+  });
 
   function tab(n) {
     var x = document.getElementsByClassName("tab");
