@@ -1,8 +1,8 @@
-#include <Arduino.h>
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#include <ArduinoWebsockets.h>
-#include <FS.h>
+#include "Arduino.h"
+#include "ESP8266WiFi.h"
+#include "ESP8266WebServer.h"
+#include "ArduinoWebsockets.h"
+#include "FS.h"
 
 #include "comms.h"
 #include "pulser.h"
@@ -160,6 +160,7 @@ void init_comms(void)
 {
 	WiFi.hostname(HOST_NAME);
 	WiFi.begin(WIFI_SSID, WIFI_PW);
+	WiFi.setSleepMode(WIFI_NONE_SLEEP);
 	Serial.printf("\nThis is %s, connecting to %s \n", HOST_NAME, WIFI_SSID);
 
 	for (int i=0; i<=500; i++) {

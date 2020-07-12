@@ -1,8 +1,6 @@
 #ifndef PULSER_H
 #define PULSER_H
 
-#define N_VOICES 3
-
 // I2S config
 #define BITS_PER_SEC 1000000  // 1 Mbits/s
 #define WORDS_PER_SEC (BITS_PER_SEC / 32)

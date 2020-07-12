@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <i2s.h>
 #include <i2s_reg.h>
+#include "musical.h"
 #include "pulser.h"
 
 enum {
