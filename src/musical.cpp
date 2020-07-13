@@ -7,6 +7,7 @@
 USING_NAMESPACE_APPLEMIDI
 APPLEMIDI_CREATE_INSTANCE(WiFiUDP, MIDI, HOST_NAME, DEFAULT_CONTROL_PORT);
 
+// frequency tuning words for all 128 midi notes
 static unsigned const midi_ftws[128] = {
     0x00004495, 0x000048a9, 0x00004cfb, 0x0000518f,
     0x00005668, 0x00005b8c, 0x000060fd, 0x000066c2,
@@ -43,6 +44,7 @@ static unsigned const midi_ftws[128] = {
 };
 
 static int cur_notes[N_VOICES];
+static int cur_duty[N_VOICES];
 static uint8_t note_fifo[N_VOICES];
 
 unsigned get_voice()
@@ -51,28 +53,64 @@ unsigned get_voice()
     for (unsigned v=0; v<N_VOICES; v++)
         if (cur_notes[v] < 0)
             return v;
-    // nothiung is IDLE, overwrite oldest note
+    // nothing is IDLE, overwrite oldest note
     return note_fifo[N_VOICES - 1];
 }
 
-byte g_volume = 100;
+static unsigned get_bend_ftw(unsigned ftw, int bend)
+{
+    // this might be expensive ...
+    float new_ftw = pow(2.0f, (float)bend / 8192.0f) * ftw;
+
+    // this is a bit cheaper maybe?? but much less accurate
+    // unsigned new_ftw = ftw;
+    // int t_bend = bend / 64; // new bend range: -128 .. 127
+    // if (t_bend < 0) {
+    //     t_bend /= -2;
+    //     new_ftw -= new_ftw * t_bend / 128;
+    // } else if (t_bend > 0) {
+    //     new_ftw += new_ftw * t_bend / 128;
+    // }
+
+    return new_ftw;
+}
+
+void print_voices()
+{
+    for (unsigned v=0; v<N_VOICES; v++) {
+        if (cur_notes[v] < 0 || cur_duty[v] < 0)
+            Serial.print(" . ");
+        else
+            Serial.printf("%2x ", cur_notes[v]);
+    }
+    Serial.print('\n');
+}
+
+int g_volume = 100;
+int g_cur_bend = 0;
 
 void note_on(byte channel, byte note, byte velocity)
 {
     if (note >= 128)
         return;
 
-    unsigned v_ch = get_voice();
+    unsigned v = get_voice();
 
     for (unsigned v=N_VOICES-1; v>0; v--)
         note_fifo[v] = note_fifo[v - 1];
-    note_fifo[0] = v_ch;
+    note_fifo[0] = v;
 
-    cur_notes[v_ch] = note;
+    cur_notes[v] = note;
+    cur_duty[v] = (velocity * g_volume) << 16;
 
-    set_pulse(v_ch, midi_ftws[note], (velocity * velocity * g_volume) << 8);
+    unsigned ftw = midi_ftws[note];
 
-    // Serial.printf("+[%d]: %d, %d\n", v_ch, note, velocity);
+    if (g_cur_bend != 0)
+        ftw = get_bend_ftw(ftw, g_cur_bend);
+
+    set_pulse(v, ftw, cur_duty[v]);
+
+    print_voices();
 }
 
 void note_off(byte channel, byte note, byte velocity)
@@ -85,13 +123,29 @@ void note_off(byte channel, byte note, byte velocity)
             set_pulse(v, 0, 0);
             // Serial.printf("-[%d]: %d, %d\n", v, note, velocity);
             cur_notes[v] = -1;
+            cur_duty[v] = -1;
+            break;
         }
     }
+
+    print_voices();
 }
 
 void pitch_bend(byte channel, int bend)
 {
-    // todo
+    // bend range = 2 cents = 0.5 ... 2.0
+    g_cur_bend = bend;
+
+    // bend all on notes
+    for (unsigned v=0; v<N_VOICES; v++) {
+        if (cur_notes[v] < 0 || cur_duty[v] < 0)
+            continue;
+
+        unsigned cur_ftw = midi_ftws[cur_notes[v]];
+        set_pulse(v, get_bend_ftw(cur_ftw, bend), cur_duty[v]);
+    }
+
+    Serial.printf("B: %d\n", bend);
 }
 
 void midi_msg(const midi::Message<128u>& msg)
@@ -103,6 +157,7 @@ void all_off()
 {
     for (unsigned v=0; v<N_VOICES; v++) {
         cur_notes[v] = -1;
+        cur_duty[v] = -1;
         note_fifo[v] = v;
     }
     stop_pulse();
@@ -115,7 +170,7 @@ void ctrl_change(byte channel, byte number, byte value)
         // case 1:  // Modulation
         // case 2: // Breath
         case 7: // Volume
-            all_off();
+            // all_off();
             g_volume = value;
             break;
         // case 12 - 29:  // organ trim registers
@@ -138,18 +193,18 @@ void ctrl_change(byte channel, byte number, byte value)
 
 void midi_con(const ssrc_t & ssrc, const char* name)
 {
-    Serial.printf("midi_con(%s)\n", name);
+    Serial.printf("midi_con(%x): %s\n", ssrc, name);
 }
 
 void midi_discon(const ssrc_t & ssrc)
 {
-    Serial.println("midi_discon()\n");
+    Serial.printf("midi_discon(%x)\n", ssrc);
     all_off();
 }
 
 void midi_err(const ssrc_t& ssrc, int32_t err)
 {
-    Serial.printf("midi_err(%x)\n", err);
+    Serial.printf("midi_err(%x): %x\n", ssrc, err);
     all_off();
 }
 
@@ -159,9 +214,9 @@ void init_musical()
     MIDI.begin(1);
     MIDI.setHandleNoteOn(note_on);
     MIDI.setHandleNoteOff(note_off);
-    MIDI.setHandleMessage(midi_msg);
+    // MIDI.setHandleMessage(midi_msg);
     MIDI.setHandleControlChange(ctrl_change);
-    // MIDI.setHandlePitchBend(pitch_bend);
+    MIDI.setHandlePitchBend(pitch_bend);
     AppleMIDI.setHandleConnected(midi_con);
     AppleMIDI.setHandleDisconnected(midi_discon);
     AppleMIDI.setHandleError(midi_err);

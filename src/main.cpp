@@ -4,7 +4,6 @@
 #include "pulser.h"
 #include "musical.h"
 #include "ESP8266mDNS.h"
-#include "main.h"
 
 // Using Ticker gives the pulser a higher priority over web-server stuff
 // without it, opening the website causes a buffer under-run
@@ -29,13 +28,10 @@ void setup() {
 void loop() {
 	static unsigned cycle = 0;
 
-	// refresh_pulser();
-
-	refresh_ws(cycle);
-	refresh_http();
-
 	refresh_musical();
 	MDNS.update();
+	refresh_ws(cycle);
+	refresh_http();
 
 	cycle++;
 }

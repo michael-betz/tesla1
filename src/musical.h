@@ -2,7 +2,8 @@
 #define MUSICAL_H
 
 // number of max. simultaneous tones
-#define N_VOICES 3
+// esp866 sounds drunk when > 2
+#define N_VOICES 2
 
 void all_off();
 

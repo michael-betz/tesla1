@@ -6,7 +6,6 @@
 
 #include "comms.h"
 #include "pulser.h"
-#include "main.h"
 
 // websocket server
 using namespace websockets;
@@ -172,6 +171,8 @@ void init_comms(void)
 		delay(100);
 		Serial.print(".");
 	}
+	if (WiFi.status() != WL_CONNECTED)
+		WiFi.softAP(HOST_NAME);
 
 	SPIFFS.begin();
 	http_server.onNotFound(handle_http);

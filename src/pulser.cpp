@@ -100,7 +100,7 @@ void set_pulse(unsigned v, unsigned ftw, unsigned duty)
 
 	g_ftw[v] = ftw;
 	g_duty[v] = duty;
-	Serial.printf("ftw[%d]: %08x  duty: %08x\n", v, ftw, duty);
+	// Serial.printf("ftw[%d]: %08x  duty: %08x\n", v, ftw, duty);
 }
 
 // -------------------------------
