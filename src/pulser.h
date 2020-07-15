@@ -2,7 +2,7 @@
 #define PULSER_H
 
 // I2S config
-#define BITS_PER_SEC 1000000  // 1 Mbits/s
+#define BITS_PER_SEC 500000  // smallest pulse: 2 us
 #define WORDS_PER_SEC (BITS_PER_SEC / 32)
 
 extern unsigned g_t_pre;  // [us]

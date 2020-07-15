@@ -98,6 +98,8 @@ void refresh_ws(unsigned cycle) {
 		s += MAX_DUTY_PERCENT;
 		s += ", \"MAX_T_ON\": ";
 		s += MAX_T_ON;
+		s += ", \"BITS_PER_SEC\": ";
+		s += BITS_PER_SEC;
 		s += "}";
 		ws_client.send(s);
 		last_ping = millis();
