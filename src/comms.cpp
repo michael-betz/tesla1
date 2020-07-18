@@ -11,7 +11,6 @@
 using namespace websockets;
 WebsocketsServer ws_server;
 WebsocketsClient ws_client;
-unsigned last_ping = 0;
 
 // http server
 ESP8266WebServer http_server(80);
@@ -34,11 +33,10 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 
 static void onMessageCallback(WebsocketsMessage message) {
 	unsigned temp_ftw=0, temp_duty=0;
+	String tmpStr;
 	char *tok = NULL;
 
 	char *s = (char *)message.c_str();
-
-	last_ping = millis();
 
 	switch (s[0]) {
 		case 'r':  // "r,0": set operating mode to DDS / lock mode
@@ -79,7 +77,11 @@ static void onMessageCallback(WebsocketsMessage message) {
 			g_t_off = strtoul(&s[2], NULL, 0);
 			break;
 
-		case 'p':  // 'p' command = ping
+		case 'i':  // 'i' command = RSSI
+			tmpStr = "{\"RSSI\": ";
+			tmpStr += WiFi.RSSI();
+			tmpStr += "}";
+			ws_client.send(tmpStr);
 			break;
 
 		default:
@@ -102,16 +104,9 @@ void refresh_ws(unsigned cycle) {
 		s += BITS_PER_SEC;
 		s += "}";
 		ws_client.send(s);
-		last_ping = millis();
 	}
-	if (ws_client.available()) {
-		// if (millis() - last_ping > 500) {
-		// 	Serial.println("ping timeout!");
-		// 	stop_pulse();
-		// 	ws_client.close(CloseReason_NoStatusRcvd);
-		// }
+	if (ws_client.available())
 		ws_client.poll();
-	}
 }
 
 

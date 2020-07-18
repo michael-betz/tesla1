@@ -48,7 +48,7 @@ static int cur_notes[N_VOICES];
 static int cur_duty[N_VOICES];
 static unsigned note_ts[N_VOICES];  // timestamp [ms]
 
-unsigned get_voice()
+static unsigned get_voice()
 {
     unsigned min_ts=note_ts[0], min_ts_ind=0;
     for (unsigned v=0; v<N_VOICES; v++) {
@@ -65,14 +65,7 @@ unsigned get_voice()
     return min_ts_ind;
 }
 
-static unsigned get_bend_ftw(unsigned ftw, int bend)
-{
-    // this might be a bit expensive ...
-    float new_ftw = pow(2.0f, (float)bend / 8192.0f) * ftw;
-    return new_ftw;
-}
-
-void print_voices()
+static void print_voices()
 {
     for (unsigned v=0; v<N_VOICES; v++) {
         if (cur_notes[v] < 0 || cur_duty[v] < 0)
@@ -83,10 +76,17 @@ void print_voices()
     Serial.print('\n');
 }
 
+static unsigned get_bend_ftw(unsigned ftw, int bend)
+{
+    // this might be a bit expensive ...
+    float new_ftw = pow(2.0f, (float)bend / 8192.0f) * ftw;
+    return new_ftw;
+}
+
 int g_volume = 100;
 int g_cur_bend = 0;
 
-void note_on(byte channel, byte note, byte velocity)
+static void note_on(byte channel, byte note, byte velocity)
 {
     if (note >= 128)
         return;
@@ -94,19 +94,46 @@ void note_on(byte channel, byte note, byte velocity)
     unsigned v_next = get_voice();
     note_ts[v_next] = millis();
     cur_notes[v_next] = note;
-    cur_duty[v_next] = (velocity * velocity * g_volume) << 10;
-
     unsigned ftw = midi_ftws[note];
+
+    // constant duty cycle (lower on time for higher notes)
+    // unsigned duty = (velocity * velocity * g_volume) << 10;
+
+    // constant on time for low notes, limit max. duty cycle for high notes
+    // volume controls on-time
+    unsigned duty = (ftw >> 12) * velocity * g_volume / 128 * g_volume;
+    if (duty > (0x000FFFFF * MAX_DUTY_PERCENT / 100))
+        duty = 0x000FFFFF * MAX_DUTY_PERCENT / 100;
+    duty <<= 12;
+    cur_duty[v_next] = duty;
+
 
     if (g_cur_bend != 0)
         ftw = get_bend_ftw(ftw, g_cur_bend);
 
-    set_pulse(v_next, ftw, cur_duty[v_next]);
+    set_pulse(v_next, ftw, duty);
 
     print_voices();
 }
 
-void note_off(byte channel, byte note, byte velocity)
+static void pitch_bend(byte channel, int bend)
+{
+    // bend range = 2 cents = 0.5 ... 2.0
+    g_cur_bend = bend;
+
+    // bend all on notes
+    for (unsigned v=0; v<N_VOICES; v++) {
+        if (cur_notes[v] < 0 || cur_duty[v] < 0)
+            continue;
+
+        unsigned cur_ftw = midi_ftws[cur_notes[v]];
+        set_pulse(v, get_bend_ftw(cur_ftw, bend), cur_duty[v]);
+    }
+
+    Serial.printf("B: %d\n", bend);
+}
+
+static void note_off(byte channel, byte note, byte velocity)
 {
     if (note >= 128)
         return;
@@ -124,23 +151,6 @@ void note_off(byte channel, byte note, byte velocity)
     print_voices();
 }
 
-void pitch_bend(byte channel, int bend)
-{
-    // bend range = 2 cents = 0.5 ... 2.0
-    g_cur_bend = bend;
-
-    // bend all on notes
-    for (unsigned v=0; v<N_VOICES; v++) {
-        if (cur_notes[v] < 0 || cur_duty[v] < 0)
-            continue;
-
-        unsigned cur_ftw = midi_ftws[cur_notes[v]];
-        set_pulse(v, get_bend_ftw(cur_ftw, bend), cur_duty[v]);
-    }
-
-    Serial.printf("B: %d\n", bend);
-}
-
 // void midi_msg(const midi::Message<128u>& msg)
 // {
 //     Serial.printf("M: %x\n", msg.type);
@@ -155,7 +165,7 @@ void all_off()
     stop_pulse();
 }
 
-void ctrl_change(byte channel, byte number, byte value)
+static void ctrl_change(byte channel, byte number, byte value)
 {
     switch (number) {
         // case 0:  // B. buttons
@@ -183,18 +193,18 @@ void ctrl_change(byte channel, byte number, byte value)
     }
 }
 
-void midi_con(const ssrc_t & ssrc, const char* name)
+static void midi_con(const ssrc_t & ssrc, const char* name)
 {
     Serial.printf("midi_con(%x): %s\n", ssrc, name);
 }
 
-void midi_discon(const ssrc_t & ssrc)
+static void midi_discon(const ssrc_t & ssrc)
 {
     Serial.printf("midi_discon(%x)\n", ssrc);
     all_off();
 }
 
-void midi_err(const ssrc_t& ssrc, int32_t err)
+static void midi_err(const ssrc_t& ssrc, int32_t err)
 {
     Serial.printf("midi_err(%x): %x\n", ssrc, err);
     all_off();

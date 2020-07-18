@@ -15,6 +15,9 @@ void setup() {
 
 	Serial.begin(115200);
 
+	pinMode(PIN_FIRE, OUTPUT);
+	digitalWrite(PIN_FIRE, IS_ACTIVE_LOW);
+
 	init_comms();
 
 	init_musical();

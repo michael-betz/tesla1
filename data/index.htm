@@ -226,14 +226,19 @@
 
     websocket.onmessage = function(evt) {
       console.log("dat: " + evt.data);
-      if (evt.data.startsWith('{"hello": ')) {
-        temp = JSON.parse(evt.data);
-        MAX_DUTY_PERCENT = temp['MAX_DUTY_PERCENT'];
+      dat = JSON.parse(evt.data);
+      if ("hello" in dat) {
+        MAX_DUTY_PERCENT = dat['MAX_DUTY_PERCENT'];
         sliders["DUTY"][0].max = MAX_DUTY_PERCENT / 100 * 10000;
-        MAX_T_ON = temp['MAX_T_ON'];
-        BITS_PER_SEC = temp["BITS_PER_SEC"];
+        MAX_T_ON = dat['MAX_T_ON'];
+        BITS_PER_SEC = dat["BITS_PER_SEC"];
         rangeReset(false);
         processT();
+        setInterval(function() {
+          websocket.send("i");
+        }, 1000);
+      } else if ("RSSI" in dat) {
+        connected_status.innerHTML = "✅ (" + dat["RSSI"] + "dBm)";
       }
     };
 

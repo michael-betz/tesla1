@@ -12,26 +12,6 @@ enum {
 	LOCK_OFF
 } g_isr_state;
 
-// 2 operating modes:
-//   * free running DDS mode, which gives precise frequency and duty cycle control
-void dds_mode()
-{
-	timer1_disable();
-	g_isr_state = NO_LOCK;
-	stop_pulse();
-	pinMode(PIN_FIRE, FUNCTION_1);
-}
-
-// 	 * 60 Hz locked mode, which uses interrupts to lock to mains frequency
-void lock_mode()
-{
-	digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
-	pinMode(PIN_FIRE, OUTPUT);
-	timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
-	// g_t_on = 0;
-	g_isr_state = LOCK_OPTO;
-}
-
 // -------------------------------
 //  DDS free-running mode
 // -------------------------------
@@ -62,13 +42,6 @@ void refresh_pulser(void)
 			sample <<= 1;
 			sample |= bit;
 		}
-	}
-}
-
-void stop_pulse(void)
-{
-	for (unsigned v=0; v<N_VOICES; v++) {
-		g_duty[v] = 0;
 	}
 }
 
@@ -154,7 +127,6 @@ ICACHE_RAM_ATTR void opto_isr()
 
 	if (m - last_millis >= 10) {
 		last_millis = m;
-		// sync_pulser();
 		if (g_isr_state == LOCK_OPTO) {
 			g_isr_state = LOCK_PRE;
 			timer1_write(g_t_pre * 5);
@@ -178,4 +150,32 @@ void init_pulser(void)
 	pinMode(PIN_60HZ, INPUT);
 	attachInterrupt(digitalPinToInterrupt(PIN_60HZ), opto_isr, RISING);
 	timer1_attachInterrupt(timer_isr);
+}
+
+void stop_pulse(void)
+{
+	for (unsigned v=0; v<N_VOICES; v++) {
+		g_duty[v] = 0;
+	}
+	g_t_on = 0;
+}
+
+// 2 operating modes:
+//   * free running DDS mode, which gives precise frequency and duty cycle control
+void dds_mode()
+{
+	timer1_disable();
+	g_isr_state = NO_LOCK;
+	stop_pulse();
+	pinMode(PIN_FIRE, FUNCTION_1);
+}
+
+// 	 * 60 Hz locked mode, which uses interrupts to lock to mains frequency
+void lock_mode()
+{
+	digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
+	pinMode(PIN_FIRE, OUTPUT);
+	stop_pulse();
+	timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+	g_isr_state = LOCK_OPTO;
 }
