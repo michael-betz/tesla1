@@ -85,6 +85,7 @@ static unsigned get_bend_ftw(unsigned ftw, int bend)
 
 int g_volume = 100;
 int g_cur_bend = 0;
+unsigned g_b_button = 0;
 
 static void note_on(byte channel, byte note, byte velocity)
 {
@@ -95,18 +96,23 @@ static void note_on(byte channel, byte note, byte velocity)
     note_ts[v_next] = millis();
     cur_notes[v_next] = note;
     unsigned ftw = midi_ftws[note];
+    unsigned duty = 0;
 
-    // constant duty cycle (lower on time for higher notes)
-    // unsigned duty = (velocity * velocity * g_volume) << 10;
+    if (g_b_button & 0x01) {
+        // constant duty cycle (lower on time for higher notes)
+        duty = (velocity * velocity * g_volume) << 10;
+    } else {
+        // constant on time for low notes, limit max. duty cycle for high notes
+        // volume controls on-time
+        duty = (ftw >> 12) * velocity * g_volume / 128 * g_volume / 8;
 
-    // constant on time for low notes, limit max. duty cycle for high notes
-    // volume controls on-time
-    unsigned duty = (ftw >> 12) * velocity * g_volume / 128 * g_volume;
-    if (duty > (0x000FFFFF * MAX_DUTY_PERCENT / 100))
-        duty = 0x000FFFFF * MAX_DUTY_PERCENT / 100;
-    duty <<= 12;
+        if (duty > (0x000FFFFF * MAX_DUTY_PERCENT / 100))
+            duty = 0x000FFFFF * MAX_DUTY_PERCENT / 100;
+        else if (duty < 0x00001000)  // lowest duty = .5 %
+            duty = 0x00001000;
+        duty <<= 12;
+    }
     cur_duty[v_next] = duty;
-
 
     if (g_cur_bend != 0)
         ftw = get_bend_ftw(ftw, g_cur_bend);
@@ -167,8 +173,13 @@ void all_off()
 
 static void ctrl_change(byte channel, byte number, byte value)
 {
+    if (channel != 1)
+        return;
+
     switch (number) {
-        // case 0:  // B. buttons
+        case 0:  // B. buttons
+            g_b_button = value;
+            break;
         // case 1:  // Modulation
         // case 2: // Breath
         case 7: // Volume
