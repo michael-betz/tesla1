@@ -45,16 +45,18 @@ There is support to lock the interrupter to the mains 50 Hz or 60 Hz zero-crossi
 This requires an opto-coupler or isolation transformer to drive one of the esp8266 GPIO pins with the mains frequency.
 
 ## RTP-Midi
+Musical Tesla coil support is built right in.
+
   * up to 3 polyphonic notes, which are xor-ed together to generate the 1 bit output sample
-  * setting the midi volume controls duty cycle and hence average power. Polyphonic notes sound better with lower duty cycles.
-  * full support for midi pitch bend commands
-  * For a good real-time piano keyboard I've used (TouchDAW)[https://xmmc.de/touchdaw/] on Android
-  * To stream Midi songs, I've used (rtpmidid)[https://github.com/davidmoreno/rtpmidid] and `aplaymidi` on Debian
+  * setting the midi volume controls duty cycle and hence average power. Polyphonic notes sound better with lower duty cycles
+  * full support for midi pitch-bend commands
+  * For a good real-time piano keyboard I've used [TouchDAW](https://xmmc.de/touchdaw) on Android
+  * To stream Midi songs, I've used [rtpmidid](https://github.com/davidmoreno/rtpmidid) and `aplaymidi` on Debian
   * RTP-midi should also be compatible with many Apple devices
 
 ## Output polarity
   * Can be active high or active low, see `platform.ini`
-  * There is a ~100 ms turn-on transient when running in `ACTIVE_LOW` mode. Also if the CPU freezes, it will enable the output for several seconds before the watchdog trips. For fail-safe operation, don't use `ACTIVE_LOW` mode
+  * There is a ~100 ms turn-on transient when running in `ACTIVE_LOW` mode. Also if the CPU freezes, it will enable the output for several seconds before the watchdog trips. For a more fail-safe operation, don't use `ACTIVE_LOW` mode
 
 # Demo
 [Tesla1 60 Hz sync](https://youtu.be/7h7VzaL8ETk)
