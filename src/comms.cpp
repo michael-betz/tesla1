@@ -2,7 +2,7 @@
 #include "ESP8266WiFi.h"
 #include "ESP8266WebServer.h"
 #include "ArduinoWebsockets.h"
-#include "FS.h"
+#include "LittleFS.h"
 
 #include "comms.h"
 #include "pulser.h"
@@ -136,10 +136,10 @@ static void handle_http(void)
 	if(path.endsWith("/")) path += "index.htm";
 	String contentType = getContentType(path);
 	String pathWithGz = path + ".gz";
-	if(SPIFFS.exists(pathWithGz) || SPIFFS.exists(path)){
-		if(SPIFFS.exists(pathWithGz))
+	if(LittleFS.exists(pathWithGz) || LittleFS.exists(path)){
+		if(LittleFS.exists(pathWithGz))
 			path += ".gz";
-		File file = SPIFFS.open(path, "r");
+		File file = LittleFS.open(path, "r");
 		http_server.streamFile(file, contentType);
 		file.close();
 		return;
@@ -154,24 +154,32 @@ void refresh_http(void)
 
 void init_comms(void)
 {
+	Serial.printf("\nThis is %s, ", HOST_NAME);
+	LittleFS.begin();
 	WiFi.hostname(HOST_NAME);
-	WiFi.begin(WIFI_SSID, WIFI_PW);
 	WiFi.setSleepMode(WIFI_NONE_SLEEP);
-	Serial.printf("\nThis is %s, connecting to %s \n", HOST_NAME, WIFI_SSID);
 
-	for (int i=0; i<=500; i++) {
-		if (WiFi.status() == WL_CONNECTED) {
-			Serial.print("\nConnected! IP: ");
-			Serial.println(WiFi.localIP());
-			break;
+	if (strlen(WIFI_SSID) > 0) {
+		Serial.printf("connecting to %s \n", WIFI_SSID);
+		WiFi.begin(WIFI_SSID, WIFI_PW);
+		for (int i=0; i<=500; i++) {
+			if (WiFi.status() == WL_CONNECTED) {
+				Serial.print("\nConnected!");
+				break;
+			}
+			delay(100);
+			Serial.print(".");
 		}
-		delay(100);
-		Serial.print(".");
 	}
-	if (WiFi.status() != WL_CONNECTED)
-		WiFi.softAP(HOST_NAME);
 
-	SPIFFS.begin();
+	if (WiFi.status() != WL_CONNECTED) {
+		Serial.printf("\nStarting AP mode, SSID: %s\n", HOST_NAME);
+		WiFi.softAP(HOST_NAME);
+	}
+
+	Serial.printf("Local IP: ");
+	Serial.println(WiFi.localIP());
+
 	http_server.onNotFound(handle_http);
 	http_server.begin();
 

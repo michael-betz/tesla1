@@ -157,10 +157,10 @@ static void note_off(byte channel, byte note, byte velocity)
     print_voices();
 }
 
-// void midi_msg(const midi::Message<128u>& msg)
-// {
-//     Serial.printf("M: %x\n", msg.type);
-// }
+void midi_msg(const midi::Message<128u>& msg)
+{
+    Serial.printf("M: %x\n", msg.type);
+}
 
 void all_off()
 {
@@ -215,16 +215,17 @@ static void midi_discon(const ssrc_t & ssrc)
     all_off();
 }
 
-static void midi_err(const ssrc_t& ssrc, int32_t err)
+static void midi_except(const ssrc_t& ssrc, const Exception& e, const int32_t value)
 {
-    Serial.printf("midi_err(%x): %x\n", ssrc, err);
-    all_off();
+    Serial.printf("midi_except(%x): %x %x\n", ssrc, e, value);
+    if (e != ParticipantNotFoundException)
+        all_off();
 }
 
 void init_musical()
 {
     // listen on midi channel 1 for events
-    MIDI.begin(1);
+    MIDI.begin();
     MIDI.setHandleNoteOn(note_on);
     MIDI.setHandleNoteOff(note_off);
     // MIDI.setHandleMessage(midi_msg);
@@ -232,7 +233,7 @@ void init_musical()
     MIDI.setHandlePitchBend(pitch_bend);
     AppleMIDI.setHandleConnected(midi_con);
     AppleMIDI.setHandleDisconnected(midi_discon);
-    AppleMIDI.setHandleError(midi_err);
+    AppleMIDI.setHandleException(midi_except);
 
     MDNS.begin(HOST_NAME);
     MDNS.addService("apple-midi", "udp", AppleMIDI.getPort());

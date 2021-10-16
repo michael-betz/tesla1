@@ -1,5 +1,5 @@
 #include <Arduino.h>
-#include <i2s.h>
+#include <I2S.h>
 #include <i2s_reg.h>
 #include "musical.h"
 #include "pulser.h"
@@ -88,7 +88,7 @@ unsigned g_t_pre = 10;  // [us]
 unsigned g_t_on = 0;  // [us]
 unsigned g_t_off = 300000;  // [us]
 
-ICACHE_RAM_ATTR void timer_isr()
+IRAM_ATTR void timer_isr()
 {
 	switch (g_isr_state) {
 		case LOCK_PRE:
@@ -120,7 +120,7 @@ ICACHE_RAM_ATTR void timer_isr()
 	}
 }
 
-ICACHE_RAM_ATTR void opto_isr()
+IRAM_ATTR void opto_isr()
 {
 	static unsigned last_millis = 0;
 	unsigned m = millis();
