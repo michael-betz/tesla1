@@ -224,6 +224,9 @@ static void midi_except(const ssrc_t& ssrc, const Exception& e, const int32_t va
 
 void init_musical()
 {
+    Serial.print("AppleMIDI device name: ");
+    Serial.println(AppleMIDI.getName());
+
     // listen on midi channel 1 for events
     MIDI.begin();
     MIDI.setHandleNoteOn(note_on);
@@ -233,11 +236,13 @@ void init_musical()
     MIDI.setHandlePitchBend(pitch_bend);
     AppleMIDI.setHandleConnected(midi_con);
     AppleMIDI.setHandleDisconnected(midi_discon);
-    AppleMIDI.setHandleException(midi_except);
+    // AppleMIDI.setHandleException(midi_except);
 
-    MDNS.begin(HOST_NAME);
+    // Set up mDNS responder
+    if (!MDNS.begin(AppleMIDI.getName()))
+        Serial.println("Error setting up MDNS responder!");
     MDNS.addService("apple-midi", "udp", AppleMIDI.getPort());
-    Serial.printf("Listening on UDP:%d for rtp midi\n", AppleMIDI.getPort());
+    Serial.printf("Listening on UDP %d for rtp midi\n", AppleMIDI.getPort());
 }
 
 

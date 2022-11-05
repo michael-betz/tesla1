@@ -172,13 +172,15 @@ void init_comms(void)
 		}
 	}
 
-	if (WiFi.status() != WL_CONNECTED) {
-		Serial.printf("\nStarting AP mode, SSID: %s\n", HOST_NAME);
+	if (WiFi.status() == WL_CONNECTED) {
+		Serial.print("Local IP: ");
+		Serial.println(WiFi.localIP());
+	} else {
 		WiFi.softAP(HOST_NAME);
+		Serial.print("\nStarting AP mode: ");
+		Serial.println(WiFi.softAPIP());
+		WiFi.setOutputPower(20.5);  // set highest WiFi power
 	}
-
-	Serial.printf("Local IP: ");
-	Serial.println(WiFi.localIP());
 
 	http_server.onNotFound(handle_http);
 	http_server.begin();
