@@ -10,10 +10,10 @@
   <i>A Tesla coil pulse generator.</i>
   <b>WS: <span id=connected_status>❌</span></b>
   <div>
-    <button onclick="tab('t_tab'); websocket.send('r,0');">T_ON / T_OFF</button>
-    <button onclick="tab('f_tab'); websocket.send('r,0');">FREQ / DUTY</button>
-    <button onclick="tab('s_tab'); websocket.send('r,2');">SINGLE SHOT</button>
-    <button onclick="tab('l_tab'); websocket.send('r,1');">MAINS LOCK</button>
+    <button onclick="tab('t_tab');">T_ON / T_OFF</button>
+    <button onclick="tab('f_tab');">FREQ / DUTY</button>
+    <button onclick="tab('s_tab');">SINGLE SHOT</button>
+    <button onclick="tab('l_tab');">MAINS LOCK</button>
   </div>
 </div>
 
@@ -58,9 +58,9 @@
     <input type="range" min="1000" max="10600" class="slider" id="SS_ON_slider">
     <span class=sliderNumber id=SS_ON_status>xxx</span>
   </div>
-  <center>
+  <div class="slidecontainer">
     <button class=fireButton id=SS_ON_btn>💥</button>
-  </center>
+  </div>
 </div>
 
 <div class="tab" id="l_tab" style="display:none">
@@ -85,7 +85,7 @@
 
 <script type="text/javascript">
   var wsUri = "ws://" + window.location.host + ":8080";
-  // var wsUri = "ws://192.168.42.217:8080";
+  // var wsUri = "ws://tesla1.local:8080";
   var websocket = new WebSocket(wsUri);
 
   // These are set to the C #define values on connection to the ESP8266
@@ -113,16 +113,31 @@
   sliders['PHASE'][0].oninput = processP;
   sliders['SS_ON'][0].oninput = processSSON;
 
-  document.getElementById("SS_ON_btn").onmousedown = function () {
+  btn = document.getElementById("SS_ON_btn");
+  function btn_down(evt) {
+    if (evt.button != 0)
+      return;
     val_us = Math.round(sliders['SS_ON'][2] * 1000 * 1000);
     console.log("DOWN: p," + val_us);
     websocket.send('p,' + val_us);
-    return false;
+    btn.style.background='#FFFFFF';
+    if (val_us < 1600000) {
+      setTimeout(function() {
+        btn.style.background='#000000';
+      }, val_us / 1000);
+    }
   };
-  document.onmouseup = function () {
+  function btn_up () {
+    if (websocket.readyState != 1)
+      return;
     console.log("UP: p,0");
+    btn.style.background='#000000';
     websocket.send('p,',0);
   };
+
+  btn.addEventListener('pointerdown', btn_down);
+  document.addEventListener('pointerup', btn_up);
+  document.addEventListener('pointercancel', btn_up);
 
   ["LPRE", "LON", "LOFF"].forEach(function (k) {
     sliders[k][0].oninput = function() {
@@ -140,6 +155,18 @@
       x[i].style.display = "none";
     }
     document.getElementById(n).style.display = "block";
+
+    rangeReset();
+
+    if (n == 't_tab')
+      websocket.send('r,0');
+    else if (n == 'f_tab')
+      websocket.send('r,0');
+    else if (n == 's_tab')
+      websocket.send('r,2');
+    else if (n == 'l_tab')
+      websocket.send('r,1');
+
     Object.keys(sliders).forEach(function(k){
       sliders[k][0].oninput();
     })
@@ -222,8 +249,8 @@
     sp[2] = sp[0].value / 10000;
     sp[1].innerHTML = (sp[2] * 360).toFixed(1) + '°';
     phase = Math.floor(sp[2] * 0xFFFFFFFF);
-    websocket.send('t,' + phase);
     console.log(phase.toString(16));
+    websocket.send('t,' + phase);
   }
 
   function processSSON() {
@@ -239,9 +266,9 @@
     console.log(s[2])
   }
 
-  function rangeReset(disable=true) {
+  function rangeReset(disabled=false) {
       for (const [k, v] of Object.entries(sliders)) {
-        v[0].disabled = disable;
+        v[0].disabled = disabled;
         if (k == "OFF")
           v[0].value = v[0].max;
         else
@@ -268,7 +295,7 @@
         sliders["DUTY"][0].max = MAX_DUTY_PERCENT / 100 * 10000;
         MAX_T_ON = dat['MAX_T_ON'];
         BITS_PER_SEC = dat["BITS_PER_SEC"];
-        rangeReset(false);
+        tab('t_tab');
         setInterval(function() {
           websocket.send("i");
         }, 1000);
