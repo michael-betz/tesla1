@@ -32,23 +32,29 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 }
 
 static void onMessageCallback(WebsocketsMessage message) {
-	unsigned temp_ftw=0, temp_duty=0;
+	static unsigned op_mode = 0;
+	unsigned temp_ftw = 0, temp_duty = 0;
 	String tmpStr;
 	char *tok = NULL;
-
 	char *s = (char *)message.c_str();
 
 	switch (s[0]) {
 		case 'r':  // "r,0": set operating mode to DDS / lock mode
-			if (s[2] == '0')
+			if (s[2] == '0') {
 				dds_mode();
-			if (s[2] == '1')
+				op_mode = 0;
+			} else if (s[2] == '1') {
 				lock_mode();
+				op_mode = 1;
+			} else if (s[2] == '2') {
+				single_shot_mode();
+				op_mode = 2;
+			}
 			break;
 
 		case 's':   // "s,100,200" set ftw to 100 and duty to 200 (int32 scale)
 			// split string into 3 tokens at ',' and convert to int
-			for(unsigned tok_id=0; tok_id<=2; tok_id++) {
+			for(unsigned tok_id = 0; tok_id <= 2; tok_id++) {
 				tok = strsep(&s, ",");
 				if (tok == NULL) {
 					Serial.printf("parse error!\n");
@@ -60,21 +66,26 @@ static void onMessageCallback(WebsocketsMessage message) {
 			set_pulse(0, temp_ftw, temp_duty);
 			break;
 
-		case 't':   // "t,100" set phase to 100
+		case 't':  // "t,100" set phase to 100
 			set_phase(0, strtoul(&s[2], NULL, 0));
 			break;
 
 		// for 60 Hz locking mode
-		case 'u':	//set t_pre (delay after opto rising edge) [us]
+		case 'u':  // set t_pre (delay after opto rising edge) [us]
 			g_t_pre = strtoul(&s[2], NULL, 0);
 			break;
 
-		case 'v':	//set t_on [us]
+		case 'v':  // set t_on [us]
 			g_t_on = strtoul(&s[2], NULL, 0);
 			break;
 
-		case 'w':	//set t_off [us]
+		case 'w':  // set t_off [us]
 			g_t_off = strtoul(&s[2], NULL, 0);
+			break;
+
+		case 'p':  // "p,100000", single shot mode, 1000 ms
+			if (op_mode == 2)
+				set_single_shot(strtoul(&s[2], NULL, 0));
 			break;
 
 		case 'i':  // 'i' command = RSSI

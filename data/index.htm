@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 <meta charset="UTF-8">
 <head><title>Tesla1</title>
@@ -11,6 +12,7 @@
   <div>
     <button onclick="tab('t_tab'); websocket.send('r,0');">T_ON / T_OFF</button>
     <button onclick="tab('f_tab'); websocket.send('r,0');">FREQ / DUTY</button>
+    <button onclick="tab('s_tab'); websocket.send('r,2');">SINGLE SHOT</button>
     <button onclick="tab('l_tab'); websocket.send('r,1');">MAINS LOCK</button>
   </div>
 </div>
@@ -50,6 +52,17 @@
   </div>
 </div>
 
+<div class="tab" id="s_tab" style="display:none">
+  <div class="slidecontainer">
+    <b>ON</b>
+    <input type="range" min="1000" max="10600" class="slider" id="SS_ON_slider">
+    <span class=sliderNumber id=SS_ON_status>xxx</span>
+  </div>
+  <center>
+    <button class=fireButton id=SS_ON_btn>💥</button>
+  </center>
+</div>
+
 <div class="tab" id="l_tab" style="display:none">
   <div class="slidecontainer">
     <b>PRE</b>
@@ -81,7 +94,7 @@
   var BITS_PER_SEC = 1000000; // I2S sampling rate
 
   var sliders = {};
-  ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF"].forEach(function (v, i) {
+  ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF", "SS_ON"].forEach(function (v, i) {
     sliders[v] = [
       document.getElementById(v + "_slider"),  // slider object
       document.getElementById(v + "_status"),  // label object
@@ -98,7 +111,18 @@
   });
 
   sliders['PHASE'][0].oninput = processP;
+  sliders['SS_ON'][0].oninput = processSSON;
 
+  document.getElementById("SS_ON_btn").onmousedown = function () {
+    val_us = Math.round(sliders['SS_ON'][2] * 1000 * 1000);
+    console.log("DOWN: p," + val_us);
+    websocket.send('p,' + val_us);
+    return false;
+  };
+  document.onmouseup = function () {
+    console.log("UP: p,0");
+    websocket.send('p,',0);
+  };
 
   ["LPRE", "LON", "LOFF"].forEach(function (k) {
     sliders[k][0].oninput = function() {
@@ -116,6 +140,9 @@
       x[i].style.display = "none";
     }
     document.getElementById(n).style.display = "block";
+    Object.keys(sliders).forEach(function(k){
+      sliders[k][0].oninput();
+    })
   }
 
   function engLabel(val, unit='Hz') {
@@ -199,6 +226,19 @@
     console.log(phase.toString(16));
   }
 
+  function processSSON() {
+    s = sliders["SS_ON"];
+    s[2] = sliderToS(s[0].value);
+
+    if (s[2] > 1.6) {
+      s[2] = 1.6;
+      s[1].innerHTML = '💣 CW 💣';
+    } else {
+      s[1].innerHTML = engLabel(s[2], 's');
+    }
+    console.log(s[2])
+  }
+
   function rangeReset(disable=true) {
       for (const [k, v] of Object.entries(sliders)) {
         v[0].disabled = disable;
@@ -212,11 +252,7 @@
 
   function init() {
     websocket.onopen = function(evt) {
-      connected_status.innerHTML = "✅";
-      // setInterval(function() {
-      //   websocket.send('p');
-      // }, 250);
-      processT();
+      connected_status.innerHTML = "⌚";
     };
 
     websocket.onclose = function(evt) {
@@ -233,7 +269,6 @@
         MAX_T_ON = dat['MAX_T_ON'];
         BITS_PER_SEC = dat["BITS_PER_SEC"];
         rangeReset(false);
-        processT();
         setInterval(function() {
           websocket.send("i");
         }, 1000);

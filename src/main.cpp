@@ -16,7 +16,7 @@ void setup() {
 	Serial.begin(115200);
 
 	pinMode(PIN_FIRE, OUTPUT);
-	digitalWrite(PIN_FIRE, IS_ACTIVE_LOW);
+	TC_OFF();
 
 	init_comms();
 

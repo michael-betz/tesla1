@@ -25,6 +25,12 @@ body {
     font-weight: bold;
 }
 
+.fireButton {
+    width: 80%;
+    font-size: 48pt;
+    padding: 10px;
+}
+
 .slidecontainer {
     display: flex;
     align-items: center;

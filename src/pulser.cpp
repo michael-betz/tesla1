@@ -5,11 +5,12 @@
 #include "pulser.h"
 
 enum {
-	NO_LOCK,
+	ISR_OFF,
 	LOCK_OPTO,
 	LOCK_PRE,
 	LOCK_ON,
-	LOCK_OFF
+	LOCK_OFF,
+	SS_ON
 } g_isr_state;
 
 // -------------------------------
@@ -80,9 +81,11 @@ void set_pulse(unsigned v, unsigned ftw, unsigned duty)
 //  60 Hz locking mode
 // -------------------------------
 // states:
-//   * wait for opto rising edge, start timer1 for t_pre
-//   * enable TC, start timer1 for t_on
-//   * disable TC, repeat
+//   * lock_mode(): LOCK_OPTO
+//   * opto_isr() on rising-edge: set timer for t_pre, LOCK_PRE
+//   * timer_isr(): enable TC, set timer for t_on, LOCK_ON
+//   * timer_isr(): disable TC, set timer for t_off, LOCK_OFF
+//   * timer_isr(): LOCK_OPTO
 
 unsigned g_t_pre = 10;  // [us]
 unsigned g_t_on = 0;  // [us]
@@ -94,49 +97,47 @@ IRAM_ATTR void timer_isr()
 		case LOCK_PRE:
 			g_isr_state = LOCK_ON;
 			if (g_t_on > 0) {
-				digitalWrite(PIN_FIRE, !IS_ACTIVE_LOW); // enable TC
+				TC_ON();
 				timer1_write(g_t_on * 5);
 			} else {
-				digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
+				TC_OFF();
 				g_isr_state = LOCK_OPTO;
 			}
 			break;
 
 		case LOCK_ON:
 			g_isr_state = LOCK_OFF;
-			digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
+			TC_OFF();
 			// timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
 			timer1_write(g_t_off * 5);
 			break;
 
 		case LOCK_OFF:
+			// Enable and wait for rising edge interrupt from opto
 			g_isr_state = LOCK_OPTO;
+			ETS_GPIO_INTR_ENABLE();
 			break;
 
 		default:
-			digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
-			g_isr_state = NO_LOCK;
+			TC_OFF();
+			g_isr_state = ISR_OFF;
 			timer1_disable();
 	}
 }
 
 IRAM_ATTR void opto_isr()
 {
-	static unsigned last_millis = 0;
-	unsigned m = millis();
-
-	if (m - last_millis >= 10) {
-		last_millis = m;
-		if (g_isr_state == LOCK_OPTO) {
-			g_isr_state = LOCK_PRE;
-			timer1_write(g_t_pre * 5);
-		}
+	if (g_isr_state == LOCK_OPTO) {
+		g_isr_state = LOCK_PRE;
+		timer1_write(g_t_pre * 5);
 	}
+	// Disable to avoid interrupt-storm on noisy / open input
+	ETS_GPIO_INTR_DISABLE();
 }
 
 void init_pulser(void)
 {
-	for (unsigned v=0; v<N_VOICES; v++) {
+	for (unsigned v = 0; v < N_VOICES; v++) {
 		g_ftw[v] = 0;
 		g_duty[v] = 0;
 		g_phase[v] = 0;
@@ -154,7 +155,7 @@ void init_pulser(void)
 
 void stop_pulse(void)
 {
-	for (unsigned v=0; v<N_VOICES; v++) {
+	for (unsigned v = 0; v < N_VOICES; v++) {
 		g_duty[v] = 0;
 	}
 	g_t_on = 0;
@@ -165,17 +166,50 @@ void stop_pulse(void)
 void dds_mode()
 {
 	timer1_disable();
-	g_isr_state = NO_LOCK;
+	g_isr_state = ISR_OFF;
+	TC_OFF();
 	stop_pulse();
 	pinMode(PIN_FIRE, FUNCTION_1);
+}
+
+static void isr_mode()
+{
+	TC_OFF();
+	pinMode(PIN_FIRE, OUTPUT);
+	stop_pulse();
 }
 
 // 	 * 60 Hz locked mode, which uses interrupts to lock to mains frequency
 void lock_mode()
 {
-	digitalWrite(PIN_FIRE, IS_ACTIVE_LOW); // disable TC
-	pinMode(PIN_FIRE, OUTPUT);
-	stop_pulse();
-	timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+	isr_mode();
+	timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);  // 5 MHz
+	ETS_GPIO_INTR_ENABLE();
 	g_isr_state = LOCK_OPTO;
+}
+
+void single_shot_mode()
+{
+	isr_mode();
+	g_isr_state = ISR_OFF;
+}
+
+// 	 single shot / CW mode, uses the same interrupts as lock_mode()
+void set_single_shot(unsigned pw_us)
+{
+	if (pw_us == 0) {
+		// disable TC immediately
+		g_isr_state = ISR_OFF;
+		TC_OFF();
+		timer1_disable();
+	} else if (g_isr_state == ISR_OFF) {
+		g_isr_state = SS_ON;
+		// for pw_us >= 1.6 s we go into CW mode!
+		if (pw_us < 1600000) {
+			// default case in timer-ISR will disable the TC again
+			timer1_enable(TIM_DIV16, TIM_EDGE, TIM_SINGLE);
+			timer1_write(pw_us * 5);
+		}
+		TC_ON();
+	}
 }
