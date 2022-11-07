@@ -37,6 +37,7 @@ static void onMessageCallback(WebsocketsMessage message) {
 	String tmpStr;
 	char *tok = NULL;
 	char *s = (char *)message.c_str();
+	Dir dir;
 
 	switch (s[0]) {
 		case 'r':  // "r,0": set operating mode to DDS / lock mode
@@ -93,6 +94,15 @@ static void onMessageCallback(WebsocketsMessage message) {
 			tmpStr += WiFi.RSSI();
 			tmpStr += "}";
 			ws_client.send(tmpStr);
+			break;
+
+		case 'l':  // 'l' list midi files
+			dir = LittleFS.openDir("/m");
+			while(dir.next()) {
+				if (dir.isFile()) {
+					ws_client.send("{\"f\": \"" + dir.fileName() + "\"}\n");
+				}
+			}
 			break;
 
 		default:

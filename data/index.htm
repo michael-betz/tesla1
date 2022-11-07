@@ -93,6 +93,8 @@
   var MAX_T_ON = 0;  // Max on-time [us]
   var BITS_PER_SEC = 1000000; // I2S sampling rate
 
+  var midis = {};
+
   var sliders = {};
   ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF", "SS_ON"].forEach(function (v, i) {
     sliders[v] = [
@@ -296,11 +298,13 @@
         MAX_T_ON = dat['MAX_T_ON'];
         BITS_PER_SEC = dat["BITS_PER_SEC"];
         tab('t_tab');
-        setInterval(function() {
-          websocket.send("i");
-        }, 1000);
+        // setInterval(function() {
+        //   websocket.send("i");
+        // }, 1000);
       } else if ("RSSI" in dat) {
         connected_status.innerHTML = "✅ (" + dat["RSSI"] + "dBm)";
+      } else if ("f" in dat) {
+        midis[dat["f"]] = null
       }
     };
 
