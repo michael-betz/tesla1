@@ -1,6 +1,7 @@
 #include "WiFiUdp.h"
 #include "ESP8266mDNS.h"
 #include "AppleMIDI.h"
+#include "LittleFS.h"
 #include "pulser.h"
 #include "musical.h"
 
@@ -246,7 +247,81 @@ void init_musical()
 }
 
 
+bool is_playing = false;
+File midi_file = NULL;
+
+typedef struct {
+    uint16_t next_time;
+    uint8_t next_cmd;
+    uint8_t next_data_a;
+    uint8_t next_data_b;
+} t_midi_event;
+
+t_midi_event next_evt;
+uint32_t next_dt = 0;
+
+
+static void get_next_event()
+{
+    // get next note
+    int ret = midi_file.read(&next_evt, sizeof(midi_event));
+    if (ret != sizeof(midi_event)) {
+        is_playing = false;
+        all_off();
+        return;
+    }
+}
+
+
+static void midi_player(bool reset)
+{
+    static uint32_t ms_ = 0;
+
+    if (reset) {
+        next_dt = 0;
+        ms_ = millis();
+    }
+
+    if (!is_playing)
+        return;
+
+    uint32_t ms = millis();
+    uint32_t dt = ms - ms_;
+
+    if (next_dt == 0) {
+        // next_dt = dt_from_file;
+    }
+
+    if (dt >= next_dt) {
+        // play note
+        // note_on()
+        // note_off()
+        // pitch_bend()
+        // next_dt = ...
+        ms_ = ms;
+    }
+}
+
+
+void play_file(String fn)
+{
+    all_off();
+
+    is_playing = false;
+    if (midi_file)
+        midi_file.close();
+
+    midi_file = LittleFS.open(fn, "r");
+    if (midi_file)
+        is_playing = true;
+    else
+        Serial.printf("Failed to open %s", fn);
+
+    midi_player(true);
+}
+
 void refresh_musical()
 {
-    MIDI.read();
+    MIDI.read();  // stream midi notes over UDP
+    midi_player(false);  // play a simplified midi file
 }

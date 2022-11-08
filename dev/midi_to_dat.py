@@ -21,7 +21,7 @@ def main():
     mf.parse()
     # print(mf)
 
-    ev_cnts = {0x80: 0, 0x90: 0, 0xA0: 0, 0xE0: 0}
+    ev_cnts = {0x80: 0, 0x90: 0, 0xE0: 0}  # Only support ON, OFF and BEND
     all_ev = []
     for idx, track in enumerate(mf):
         track.parse()
