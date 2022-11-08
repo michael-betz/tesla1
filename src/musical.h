@@ -10,6 +10,10 @@
 
 void all_off();
 
+void note_on(byte channel, byte note, byte velocity);
+void pitch_bend(byte channel, int bend);
+void note_off(byte channel, byte note, byte velocity);
+
 void init_musical();
 
 void refresh_musical();

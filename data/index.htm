@@ -14,6 +14,7 @@
     <button onclick="tab('f_tab');">FREQ / DUTY</button>
     <button onclick="tab('s_tab');">SINGLE SHOT</button>
     <button onclick="tab('l_tab');">MAINS LOCK</button>
+    <button onclick="tab('m_tab');">MIDI</button>
   </div>
 </div>
 
@@ -83,9 +84,20 @@
   </div>
 </div>
 
+<div class="tab" id="m_tab" style="display:none;">
+  <ul id="song_list">
+    <li>Adele</li>
+    <li>Agnes</li>
+    <li>Billy</li>
+    <li>Bob</li>
+    <li>Calvin</li>
+    <li>Christina</li>
+    <li>Cindy</li>
+  </ul>
+</div>
 <script type="text/javascript">
-  var wsUri = "ws://" + window.location.host + ":8080";
-  // var wsUri = "ws://tesla1.local:8080";
+  // var wsUri = "ws://" + window.location.host + ":8080";
+  var wsUri = "ws://tesla1.local:8080";
   var websocket = new WebSocket(wsUri);
 
   // These are set to the C #define values on connection to the ESP8266
@@ -298,9 +310,13 @@
         MAX_T_ON = dat['MAX_T_ON'];
         BITS_PER_SEC = dat["BITS_PER_SEC"];
         tab('t_tab');
-        // setInterval(function() {
-        //   websocket.send("i");
-        // }, 1000);
+
+        websocket.send("l");  // get list of midi files
+        // document.getElementById("song_list").clear();
+
+        setInterval(function() {
+          websocket.send("i");
+        }, 1000);
       } else if ("RSSI" in dat) {
         connected_status.innerHTML = "✅ (" + dat["RSSI"] + "dBm)";
       } else if ("f" in dat) {

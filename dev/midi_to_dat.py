@@ -34,19 +34,23 @@ def main():
 
     fOut = clean_name(fName).with_suffix('.dat')
     with open(fOut, 'wb') as f:
-        t0 = None
+        # t0 = None
         ev_ = None
+        t_ = 0
         for i, ev in enumerate(sorted(all_ev, key=lambda x: x.time)):
             if i == 0:
-                t0 = ev.time
+                t_ = ev.time
             else:
                 # Filter out duplicate events
                 if str(ev) == str(ev_):
                     continue
-            ev.time -= t0
+            # ev.time -= t0
+            dt = ev.time - t_
+            t_ = ev.time
 
             # Write note events to simple .dat file
-            dat = pack('HBBB', ev.time & 0xFFFF, ev.command, *ev.data)
+            # TODO make sure dt is in [ms]
+            dat = pack('HBBB', dt & 0xFFFF, ev.command, *ev.data)
             f.write(dat)
 
             ev_cnts[ev.command] += 1

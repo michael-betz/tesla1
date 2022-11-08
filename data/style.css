@@ -1,6 +1,6 @@
 
 /*
-dark blue:  #FDFFFC
+dark blue:  #011627
 white:      #FDFFFC
 turq:       #2EC4B6
 hl orange:  #FF9F1C
@@ -103,5 +103,24 @@ button {
 }
 
 button:hover {
+    background-color: #500000;
+}
+
+
+ul {
+  list-style-type: none;
+  width: 200px;
+}
+
+ul li {
+  border: 1px solid #FDFFFC;
+  color: #FF9F1C;
+  padding: 12px;
+
+/*  margin-top: -1px;*/
+/*  background-color: #E71D36;*/
+}
+
+ul li:hover {
     background-color: #500000;
 }

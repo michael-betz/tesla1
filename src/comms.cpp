@@ -2,6 +2,7 @@
 #include "ESP8266WiFi.h"
 #include "ESP8266WebServer.h"
 #include "ArduinoWebsockets.h"
+#include "player.h"
 #include "LittleFS.h"
 
 #include "comms.h"
@@ -39,7 +40,40 @@ static void onMessageCallback(WebsocketsMessage message) {
 	char *s = (char *)message.c_str();
 	Dir dir;
 
+	if (message.length() < 1)
+		return;
+
 	switch (s[0]) {
+		case 'i':  // 'i' command = RSSI
+			tmpStr = "{\"RSSI\": ";
+			tmpStr += WiFi.RSSI();
+			tmpStr += "}";
+			ws_client.send(tmpStr);
+			break;
+
+		case 'l':  // 'l' list midi files
+			dir = LittleFS.openDir("/m");
+			while(dir.next()) {
+				if (dir.isFile()) {
+					ws_client.send("{\"f\": \"" + dir.fileName() + "\"}\n");
+				}
+			}
+			break;
+
+		case 'm':  // play a midi file
+			if (message.length() > 1)
+				play_file(&s[1]);
+			break;
+
+		case 'n':  // stop playback
+			stop_playback();
+			break;
+
+		case 'p':  // "p,100000", single shot mode, 1000 ms
+			if (op_mode == 2)
+				set_single_shot(strtoul(&s[2], NULL, 0));
+			break;
+
 		case 'r':  // "r,0": set operating mode to DDS / lock mode
 			if (s[2] == '0') {
 				dds_mode();
@@ -82,27 +116,6 @@ static void onMessageCallback(WebsocketsMessage message) {
 
 		case 'w':  // set t_off [us]
 			g_t_off = strtoul(&s[2], NULL, 0);
-			break;
-
-		case 'p':  // "p,100000", single shot mode, 1000 ms
-			if (op_mode == 2)
-				set_single_shot(strtoul(&s[2], NULL, 0));
-			break;
-
-		case 'i':  // 'i' command = RSSI
-			tmpStr = "{\"RSSI\": ";
-			tmpStr += WiFi.RSSI();
-			tmpStr += "}";
-			ws_client.send(tmpStr);
-			break;
-
-		case 'l':  // 'l' list midi files
-			dir = LittleFS.openDir("/m");
-			while(dir.next()) {
-				if (dir.isFile()) {
-					ws_client.send("{\"f\": \"" + dir.fileName() + "\"}\n");
-				}
-			}
 			break;
 
 		default:
