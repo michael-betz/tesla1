@@ -32,9 +32,8 @@ def main():
                 if ev.command in ev_cnts:
                     all_ev.append(ev)
 
-    fOut = clean_name(fName).with_suffix('.dat')
+    fOut = fName.parent / 'dat' / clean_name(fName)
     with open(fOut, 'wb') as f:
-        # t0 = None
         ev_ = None
         t_ = 0
         for i, ev in enumerate(sorted(all_ev, key=lambda x: x.time)):
@@ -44,13 +43,13 @@ def main():
                 # Filter out duplicate events
                 if str(ev) == str(ev_):
                     continue
-            # ev.time -= t0
+
+            # TODO make sure dt is in [ms]
             dt = ev.time - t_
             t_ = ev.time
 
             # Write note events to simple .dat file
-            # TODO make sure dt is in [ms]
-            dat = pack('HBBB', dt & 0xFFFF, ev.command, *ev.data)
+            dat = pack('<HBBB', dt & 0xFFFF, ev.command, *ev.data)
             f.write(dat)
 
             ev_cnts[ev.command] += 1
@@ -64,8 +63,8 @@ def main():
 def clean_name(fn):
     n = fn.with_suffix('').name
     n = re.sub('\W|^(?=\d)','', n)
-    n = n[:27]
-    return fn.with_name(n).with_suffix(fn.suffix)
+    n = n[:30]
+    return n
 
 
 if __name__ == '__main__':

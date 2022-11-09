@@ -16,12 +16,13 @@ static int get_next_event()
         return -1;
 
     // get next note
-    int ret = midi_file.read((uint8_t*)&next_evt, sizeof(t_midi_event));
-    if (ret != sizeof(t_midi_event))
+    int ret = midi_file.read((uint8_t*)&next_evt, 5);
+    if (ret != 5)
         return -1;
 
     return ret;
 }
+
 
 static void play_event()
 {
@@ -43,6 +44,7 @@ static void play_event()
     }
 }
 
+
 void refresh_player()
 {
     if (!is_playing)
@@ -63,6 +65,7 @@ void refresh_player()
 
 void stop_playback()
 {
+    Serial.printf("Stopping playback\n");
     is_playing = false;
     all_off();
     if (midi_file)
@@ -74,9 +77,13 @@ void play_file(const char *fn)
 {
     stop_playback();
 
-    midi_file = LittleFS.open(fn, "r");
+    String s = "/m/";
+    s += fn;
+    Serial.printf("Playing %s ...\n", s.c_str());
+
+    midi_file = LittleFS.open(s.c_str(), "r");
     if (!midi_file) {
-        Serial.printf("Failed to open %s", fn);
+        Serial.printf("Failed to open %s\n", s.c_str());
         return;
     }
 

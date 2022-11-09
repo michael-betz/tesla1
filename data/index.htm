@@ -86,26 +86,41 @@
 
 <div class="tab" id="m_tab" style="display:none;">
   <ul id="song_list">
-    <li>Adele</li>
-    <li>Agnes</li>
-    <li>Billy</li>
-    <li>Bob</li>
-    <li>Calvin</li>
-    <li>Christina</li>
-    <li>Cindy</li>
+    <li>xxx</li>
   </ul>
 </div>
+
 <script type="text/javascript">
-  // var wsUri = "ws://" + window.location.host + ":8080";
-  var wsUri = "ws://tesla1.local:8080";
+  var wsUri = "ws://" + window.location.host + ":8080";
+  // var wsUri = "ws://tesla1.local:8080";
   var websocket = new WebSocket(wsUri);
+
+  // Take care of midi list behavior
+  var last_active = null;
+  document.querySelector("ul").addEventListener(
+    "click",
+    (ev) => {
+      if (ev.target.tagName === "LI") {
+        if (ev.target.classList.toggle("playing")) {
+          if (last_active != null)
+            last_active.classList.remove("playing");
+          last_active = ev.target;
+          console.log('playing ' + ev.target.innerText);
+          websocket.send('m' + ev.target.innerText);
+        } else {
+          last_active = null;
+          console.log('stop playing!');
+          websocket.send('n');
+        }
+      }
+    },
+    false
+  );
 
   // These are set to the C #define values on connection to the ESP8266
   var MAX_DUTY_PERCENT = 0;  // Max duty cycle [%]
   var MAX_T_ON = 0;  // Max on-time [us]
   var BITS_PER_SEC = 1000000; // I2S sampling rate
-
-  var midis = {};
 
   var sliders = {};
   ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF", "SS_ON"].forEach(function (v, i) {
@@ -311,8 +326,8 @@
         BITS_PER_SEC = dat["BITS_PER_SEC"];
         tab('t_tab');
 
-        websocket.send("l");  // get list of midi files
-        // document.getElementById("song_list").clear();
+        document.getElementById("song_list").innerHTML = '';  // clear list
+        websocket.send("l");  // get names of all midi files
 
         setInterval(function() {
           websocket.send("i");
@@ -320,7 +335,9 @@
       } else if ("RSSI" in dat) {
         connected_status.innerHTML = "✅ (" + dat["RSSI"] + "dBm)";
       } else if ("f" in dat) {
-        midis[dat["f"]] = null
+        var li = document.createElement("li");
+        li.innerText = dat['f'];
+        document.getElementById("song_list").appendChild(li);
       }
     };
 
