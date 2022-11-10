@@ -75,6 +75,7 @@ static void onMessageCallback(WebsocketsMessage message) {
 			break;
 
 		case 'r':  // "r,0": set operating mode to DDS / lock mode
+			stop_playback();
 			if (s[2] == '0') {
 				dds_mode();
 				op_mode = 0;

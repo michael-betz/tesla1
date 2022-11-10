@@ -195,6 +195,8 @@
       websocket.send('r,2');
     else if (n == 'l_tab')
       websocket.send('r,1');
+    else if (n == 'm_tab')
+      websocket.send('r,0');
 
     Object.keys(sliders).forEach(function(k){
       sliders[k][0].oninput();
