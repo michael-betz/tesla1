@@ -2,11 +2,11 @@
 #include "ESP8266WiFi.h"
 #include "ESP8266WebServer.h"
 #include "ArduinoWebsockets.h"
-#include "player.h"
 #include "LittleFS.h"
-
-#include "comms.h"
 #include "pulser.h"
+#include "musical.h"
+#include "player.h"
+#include "comms.h"
 
 // websocket server
 using namespace websockets;
@@ -36,6 +36,7 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 static void onMessageCallback(WebsocketsMessage message) {
 	static unsigned op_mode = 0;
 	unsigned temp_ftw = 0, temp_duty = 0;
+	float tmp_multi;
 	String tmpStr;
 	char *tok = NULL;
 	char *s = (char *)message.c_str();
@@ -68,6 +69,12 @@ static void onMessageCallback(WebsocketsMessage message) {
 
 		case 'n':  // stop playback
 			stop_playback();
+			break;
+
+		case 'o':  // set pitch multiplier
+			tmp_multi = strtof(&s[2], NULL);
+			if (tmp_multi > 0.1 && tmp_multi < 10)
+				pitch_multi_player = tmp_multi;
 			break;
 
 		case 'p':  // "p,100000", single shot mode, 1000 ms

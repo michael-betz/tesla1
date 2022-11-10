@@ -85,6 +85,11 @@
 </div>
 
 <div class="tab" id="m_tab" style="display:none;">
+  <div class="slidecontainer">
+      <b>PITCH</b>
+      <input type="range" min="-150" max="150" class="slider" id="PITCH_slider">
+      <span class=sliderNumber id=PITCH_status>xxx</span>
+  </div>
   <ul id="song_list">
     <li>xxx</li>
   </ul>
@@ -107,6 +112,7 @@
           last_active = ev.target;
           console.log('playing ' + ev.target.innerText);
           websocket.send('m' + ev.target.innerText);
+          sliders["PITCH"][0].oninput();
         } else {
           last_active = null;
           console.log('stop playing!');
@@ -123,7 +129,7 @@
   var BITS_PER_SEC = 1000000; // I2S sampling rate
 
   var sliders = {};
-  ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF", "SS_ON"].forEach(function (v, i) {
+  ["ON", "OFF", "FREQ", "DUTY", "PHASE", "LPRE", "LON", "LOFF", "SS_ON", "PITCH"].forEach(function (v, i) {
     sliders[v] = [
       document.getElementById(v + "_slider"),  // slider object
       document.getElementById(v + "_status"),  // label object
@@ -177,6 +183,14 @@
       websocket.send(cmd + ',' + v[0].value);
     };
   });
+
+  sliders["PITCH"][0].oninput = function() {
+      v = sliders["PITCH"];
+      v[2] = v[0].value / 50;
+      v[1].innerHTML = v[2].toFixed(2) + ' C';
+      p_mult = Math.pow(2.0, v[0].value / 100);
+      websocket.send("o" + "," + p_mult.toFixed(3));
+  }
 
   function tab(n) {
     var x = document.getElementsByClassName("tab");
@@ -261,10 +275,7 @@
       sf = sliders["FREQ"]
       sd = sliders["DUTY"]
 
-      if (false)
-        sf[2] = 119 + sf[0].value / 5000;
-      else
-        sf[2] = 1 / sliderToS(sf[0].value);
+      sf[2] = 1 / sliderToS(sf[0].value);
       sf[1].innerHTML = engLabel(sf[2], 'Hz');
 
       sd[2] = sd[0].value / 10000;
@@ -305,7 +316,8 @@
         else
           v[0].value = v[0].min;
       }
-      sliders["FREQ"][0].value = 5000;
+      sliders["FREQ"][0].value = 7000;
+      sliders["PITCH"][0].value = 0;
   };
 
   function init() {

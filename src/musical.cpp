@@ -78,16 +78,12 @@ static void print_voices()
     Serial.print('\n');
 }
 
-static unsigned get_bend_ftw(unsigned ftw, int bend)
-{
-    // this might be a bit expensive ...
-    float new_ftw = pow(2.0f, (float)bend / 0x2000) * ftw;
-    return new_ftw;
-}
 
-int g_volume = 100;
-int g_cur_bend = 0;
-unsigned g_b_button = 0;
+static int g_volume = 30;
+static unsigned g_b_button = 0;
+
+static float pitch_multi = 1.0;
+float pitch_multi_player = 1.0;
 
 void note_on(byte channel, byte note, byte velocity)
 {
@@ -116,18 +112,16 @@ void note_on(byte channel, byte note, byte velocity)
     }
     cur_duty[v_next] = duty;
 
-    if (g_cur_bend != 0)
-        ftw = get_bend_ftw(ftw, g_cur_bend);
-
+    ftw = ftw * pitch_multi * pitch_multi_player;
     set_pulse(v_next, ftw, duty);
-
     print_voices();
 }
 
 void pitch_bend(byte channel, int bend)
 {
     // bend range = 2 cents = 0.5 ... 2.0
-    g_cur_bend = bend;
+    // g_cur_bend = bend;
+    pitch_multi = pow(2.0f, (float)bend / 0x2000);
 
     // bend all on notes
     for (unsigned v=0; v<N_VOICES; v++) {
@@ -135,7 +129,7 @@ void pitch_bend(byte channel, int bend)
             continue;
 
         unsigned cur_ftw = midi_ftws[cur_notes[v]];
-        set_pulse(v, get_bend_ftw(cur_ftw, bend), cur_duty[v]);
+        set_pulse(v, cur_ftw * pitch_multi * pitch_multi_player, cur_duty[v]);
     }
 
     Serial.printf("B: %d\n", bend);
@@ -171,6 +165,7 @@ void all_off()
         cur_duty[v] = -1;
     }
     stop_pulse();
+    pitch_multi_player = 1.0;
 }
 
 static void ctrl_change(byte channel, byte number, byte value)

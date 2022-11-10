@@ -18,4 +18,6 @@ void init_musical();
 
 void refresh_musical();
 
+extern float pitch_multi_player;
+
 #endif
