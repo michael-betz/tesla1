@@ -28,6 +28,7 @@ static void play_event()
 {
     uint8_t ch = next_evt.cmd & 0x0F;
     uint8_t cmd = (next_evt.cmd >> 4) & 0x0F;
+    int tmp;
 
     switch(cmd) {
         case 0x8:
@@ -39,7 +40,8 @@ static void play_event()
             break;
 
         case 0xE:
-            pitch_bend(ch, (next_evt.data_b << 7) | (next_evt.data_a & 0x7F));
+            tmp = ((next_evt.data_b & 0x7F) << 7) | (next_evt.data_a & 0x7F);
+            pitch_bend(ch, tmp - 0x2000);
             break;
     }
 }

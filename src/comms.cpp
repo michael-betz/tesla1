@@ -24,6 +24,7 @@ static void onEventCallback(WebsocketsEvent event, String data) {
 		Serial.print(" <open> ");
 	} else if(event == WebsocketsEvent::ConnectionClosed) {
 		Serial.print(" <close> ");
+		stop_playback();
 		stop_pulse();
 	} else if(event == WebsocketsEvent::GotPing) {
 		Serial.print(" <ping> ");

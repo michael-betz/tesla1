@@ -81,7 +81,7 @@ static void print_voices()
 static unsigned get_bend_ftw(unsigned ftw, int bend)
 {
     // this might be a bit expensive ...
-    float new_ftw = pow(2.0f, (float)bend / 8192.0f) * ftw;
+    float new_ftw = pow(2.0f, (float)bend / 0x2000) * ftw;
     return new_ftw;
 }
 
