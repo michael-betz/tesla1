@@ -23,13 +23,20 @@ def main():
     ev_cnts = {0x80: 0, 0x90: 0, 0xE0: 0}
     n_filtered = 0
     active_notes = set()
+    dt = 0.0
 
     with open(fOut, 'wb') as f:
-        for ev in mf:
+        for i, ev in enumerate(mf):
+            dt += ev.time
             evb = ev.bin()
+
+            # note_on with 0 velocity is the same as note_off
+            if evb[0] == 0x90 and evb[2] == 0:
+                evb[0] = 0x80
 
             # skip all non relevant events
             if evb[0] not in ev_cnts:
+                # print(f'{i:4d}', ev)
                 continue
 
             if evb[0] == 0x90:  # note on
@@ -47,8 +54,13 @@ def main():
                     continue
 
             # Write events to simple .dat file
-            dat = pack('<HBBB', int(ev.time * 1000) & 0xFFFF, *evb)
+            # Make sure there are no delays before the first note-ON event
+            dt_i = 0 if ev_cnts[0x90] == 0 else int(dt * 1000) & 0xFFFF
+            dt = 0.0
+
+            dat = pack('<HBBB', dt_i, *evb)
             f.write(dat)
+
             ev_cnts[evb[0]] += 1
 
     for k, v in ev_cnts.items():

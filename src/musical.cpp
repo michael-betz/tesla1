@@ -120,7 +120,6 @@ void note_on(byte channel, byte note, byte velocity)
 void pitch_bend(byte channel, int bend)
 {
     // bend range = 2 cents = 0.5 ... 2.0
-    // g_cur_bend = bend;
     pitch_multi = pow(2.0f, (float)bend / 0x2000);
 
     // bend all on notes
